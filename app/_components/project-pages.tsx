@@ -119,10 +119,9 @@ export function ProductContent() {
             <div className="absolute inset-x-5 top-10 bottom-20 flex items-center justify-center sm:inset-x-10 lg:inset-y-10 lg:left-0 lg:right-12">
               <ProductSurfaceVisual />
             </div>
-            <div className="absolute right-5 bottom-5 left-5 grid gap-4 border-t border-white/10 pt-5 sm:grid-cols-3 lg:right-12 lg:left-0">
+            <div className="absolute bottom-5 left-1/2 flex w-[min(520px,calc(100%-2.5rem))] -translate-x-1/2 flex-wrap justify-center gap-x-12 gap-y-4 border-t border-white/10 pt-5 text-center">
               <ProductProof label="Material" value="PMMA cover analog" />
               <ProductProof label="Texture" value="30% CO2 laser dot density" />
-              <ProductProof label="Test" value="45 deg tilt, 10 mL water" />
             </div>
           </div>
         </div>
@@ -207,7 +206,7 @@ export function ProductContent() {
 
 function ProductProof({ label, value }: { label: string; value: string }) {
   return (
-    <div className="group grid gap-1 transition-transform duration-300 hover:-translate-y-0.5">
+    <div className="group grid min-w-[11rem] justify-items-center gap-1 transition-transform duration-300 hover:-translate-y-0.5">
       <span className="text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
         {label}
       </span>
@@ -284,16 +283,384 @@ function ProductSurfaceVisual() {
           key={index}
         />
       ))}
-      <div className="absolute top-8 left-1/2 grid -translate-x-1/2 justify-items-center gap-1 text-center text-[#061116] transition-transform duration-700 group-hover:translate-y-2">
+      <SoilWashAnimation />
+      <div className="absolute top-8 left-1/2 grid -translate-x-1/2 justify-items-center gap-1 text-center text-[#063238] transition-transform duration-700 group-hover:translate-y-2">
         <span className="text-[0.68rem] font-black tracking-[0.22em] uppercase">
-          water path
+          runoff path
         </span>
         <span className="flex flex-col items-center" aria-hidden="true">
-          <span className="h-14 w-1 bg-[#ef3d33]" />
-          <span className="-mt-px h-0 w-0 border-x-[10px] border-t-[16px] border-x-transparent border-t-[#ef3d33]" />
+          <span className="h-14 w-1 bg-[#18bcc8]" />
+          <span className="-mt-px h-0 w-0 border-x-[10px] border-t-[16px] border-x-transparent border-t-[#18bcc8]" />
         </span>
       </div>
     </div>
+  );
+}
+
+function SoilWashAnimation() {
+  const soilParticles = [
+    { x: 52, y: 56, r: 2.4, delay: 0.1 },
+    { x: 96, y: 82, r: 1.8, delay: 0.4 },
+    { x: 148, y: 62, r: 2.8, delay: 0.2 },
+    { x: 210, y: 92, r: 1.9, delay: 0.7 },
+    { x: 268, y: 68, r: 2.5, delay: 0.5 },
+    { x: 330, y: 88, r: 3.1, delay: 0.8 },
+    { x: 378, y: 58, r: 2, delay: 0.3 },
+    { x: 78, y: 122, r: 2.7, delay: 1 },
+    { x: 126, y: 146, r: 1.7, delay: 1.3 },
+    { x: 182, y: 118, r: 2.1, delay: 1.1 },
+    { x: 238, y: 156, r: 3, delay: 1.6 },
+    { x: 294, y: 130, r: 2.2, delay: 1.2 },
+    { x: 352, y: 152, r: 2.6, delay: 1.5 },
+    { x: 44, y: 194, r: 3.1, delay: 2 },
+    { x: 104, y: 210, r: 2, delay: 2.3 },
+    { x: 156, y: 184, r: 2.5, delay: 2.1 },
+    { x: 216, y: 222, r: 1.8, delay: 2.6 },
+    { x: 274, y: 194, r: 3.2, delay: 2.4 },
+    { x: 334, y: 218, r: 2.1, delay: 2.7 },
+    { x: 382, y: 188, r: 2.7, delay: 2.2 },
+    { x: 66, y: 266, r: 2.2, delay: 3.1 },
+    { x: 118, y: 246, r: 3.4, delay: 2.9 },
+    { x: 170, y: 282, r: 2.4, delay: 3.4 },
+    { x: 226, y: 260, r: 1.8, delay: 3.2 },
+    { x: 288, y: 292, r: 3.1, delay: 3.7 },
+    { x: 346, y: 264, r: 2.2, delay: 3.5 },
+    { x: 392, y: 304, r: 1.7, delay: 3.9 },
+    { x: 46, y: 342, r: 2.6, delay: 4.2 },
+    { x: 98, y: 366, r: 1.9, delay: 4.5 },
+    { x: 154, y: 334, r: 3.3, delay: 4.1 },
+    { x: 206, y: 374, r: 2.2, delay: 4.7 },
+    { x: 262, y: 346, r: 1.8, delay: 4.4 },
+    { x: 316, y: 382, r: 3, delay: 4.9 },
+    { x: 372, y: 354, r: 2.3, delay: 4.6 },
+    { x: 72, y: 426, r: 3.1, delay: 5.1 },
+    { x: 126, y: 406, r: 2, delay: 5.4 },
+    { x: 178, y: 448, r: 2.7, delay: 5.2 },
+    { x: 238, y: 418, r: 1.8, delay: 5.7 },
+    { x: 292, y: 456, r: 3.3, delay: 5.5 },
+    { x: 354, y: 424, r: 2.1, delay: 5.9 },
+    { x: 42, y: 494, r: 2.5, delay: 6.2 },
+    { x: 96, y: 468, r: 1.7, delay: 6 },
+    { x: 150, y: 506, r: 3.2, delay: 6.4 },
+    { x: 210, y: 482, r: 2.1, delay: 6.1 },
+    { x: 270, y: 512, r: 2.8, delay: 6.6 },
+    { x: 326, y: 474, r: 1.9, delay: 6.3 },
+    { x: 382, y: 500, r: 2.6, delay: 6.7 }
+  ];
+
+  const droplets = [
+    { x: 54, dx: 24, delay: 0, dur: 4.9, scale: 0.56 },
+    { x: 88, dx: -16, delay: 0.35, dur: 5.4, scale: 0.42 },
+    { x: 126, dx: 18, delay: 0.72, dur: 5.1, scale: 0.5 },
+    { x: 162, dx: -10, delay: 1.08, dur: 5.7, scale: 0.45 },
+    { x: 198, dx: 22, delay: 1.44, dur: 5.2, scale: 0.62 },
+    { x: 236, dx: -18, delay: 1.8, dur: 5.8, scale: 0.48 },
+    { x: 274, dx: 14, delay: 2.16, dur: 5.3, scale: 0.54 },
+    { x: 310, dx: -22, delay: 2.52, dur: 5.9, scale: 0.44 },
+    { x: 348, dx: 16, delay: 2.88, dur: 5.2, scale: 0.52 },
+    { x: 382, dx: -12, delay: 3.24, dur: 5.6, scale: 0.4 },
+    { x: 112, dx: 30, delay: 3.6, dur: 5.1, scale: 0.46 },
+    { x: 248, dx: -24, delay: 3.95, dur: 5.5, scale: 0.58 }
+  ];
+
+  const surfaceBeads = [
+    { x: 38, y: 74, r: 2.4, delay: 0.1 },
+    { x: 116, y: 58, r: 2.8, delay: 0.8 },
+    { x: 194, y: 82, r: 2.1, delay: 1.4 },
+    { x: 286, y: 64, r: 2.6, delay: 2 },
+    { x: 358, y: 96, r: 1.9, delay: 2.6 },
+    { x: 72, y: 154, r: 2.2, delay: 3.2 },
+    { x: 146, y: 178, r: 3, delay: 0.5 },
+    { x: 228, y: 148, r: 2.5, delay: 1.1 },
+    { x: 318, y: 186, r: 2.2, delay: 1.7 },
+    { x: 382, y: 160, r: 2.7, delay: 2.3 },
+    { x: 42, y: 248, r: 2.5, delay: 2.9 },
+    { x: 124, y: 224, r: 1.8, delay: 3.5 },
+    { x: 204, y: 262, r: 2.9, delay: 0.2 },
+    { x: 278, y: 238, r: 2.1, delay: 0.9 },
+    { x: 346, y: 274, r: 2.6, delay: 1.5 },
+    { x: 86, y: 334, r: 2.4, delay: 2.1 },
+    { x: 166, y: 364, r: 2, delay: 2.7 },
+    { x: 242, y: 330, r: 2.8, delay: 3.3 },
+    { x: 324, y: 372, r: 2.2, delay: 0.6 },
+    { x: 68, y: 438, r: 2.7, delay: 1.2 },
+    { x: 154, y: 414, r: 2.1, delay: 1.8 },
+    { x: 236, y: 456, r: 2.5, delay: 2.4 },
+    { x: 316, y: 428, r: 1.9, delay: 3 },
+    { x: 382, y: 470, r: 2.3, delay: 3.6 }
+  ];
+
+  const trails = [
+    "M88 -30 C78 92 122 168 104 292 C92 368 124 432 116 572",
+    "M156 -40 C178 84 136 176 154 286 C170 382 138 452 150 572",
+    "M224 -30 C206 76 250 166 226 278 C210 358 252 448 236 572",
+    "M298 -40 C322 96 276 172 300 304 C318 398 288 462 304 572",
+    "M52 -34 C82 74 42 188 68 292 C90 382 56 468 84 572",
+    "M356 -38 C330 88 384 176 354 300 C334 386 378 462 350 572"
+  ];
+
+  const washCycle = "9.6s";
+  const toKeyTime = (value: number) => value.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  const toValue = (value: number) => value.toFixed(2).replace(/0+$/, "").replace(/\.$/, "");
+  const clamp01 = (value: number) => Math.min(1, Math.max(0, value));
+  const makeSoilTiming = (particle: { y: number; r: number }) => {
+    const position = clamp01(particle.y / 540);
+    const appearMid = 0.06 + position * 0.08;
+    const full = 0.17 + position * 0.07;
+    const washStart = 0.38 + position * 0.25;
+    const washMid = washStart + 0.07;
+    const clear = washStart + 0.15;
+    const drift = 34 + position * 30;
+    const carried = 92 + position * 44;
+
+    return {
+      keyTimes: [0, appearMid, full, washStart, washMid, clear, 0.88, 1]
+        .map(toKeyTime)
+        .join(";"),
+      opacity: "0;0.42;0.82;0.82;0.28;0;0;0",
+      radius: [
+        0.2,
+        particle.r * 0.62,
+        particle.r,
+        particle.r,
+        particle.r * 0.9,
+        0.18,
+        0.18,
+        0.18
+      ]
+        .map(toValue)
+        .join(";"),
+      transform: [
+        "0 0",
+        "0 0",
+        "0 0",
+        "0 0",
+        `7 ${toValue(drift)}`,
+        `22 ${toValue(carried)}`,
+        `22 ${toValue(carried)}`,
+        "0 0"
+      ].join(";")
+    };
+  };
+  const makeBeadTiming = (bead: { y: number }) => {
+    const position = clamp01(bead.y / 540);
+    const arrive = 0.32 + position * 0.25;
+    const peak = arrive + 0.06;
+    const exit = arrive + 0.22;
+
+    return {
+      keyTimes: [0, arrive, peak, exit, 0.84, 1].map(toKeyTime).join(";"),
+      opacity: "0;0;0.72;0.34;0;0",
+      transform: "0 -42;0 -42;0 -8;0 58;0 118;0 -42"
+    };
+  };
+
+  return (
+    <svg
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-0 h-full w-full"
+      preserveAspectRatio="none"
+      viewBox="0 0 420 540"
+    >
+      <defs>
+        <radialGradient cx="35%" cy="28%" id="dropGradient" r="72%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.96" />
+          <stop offset="34%" stopColor="#aef8ff" stopOpacity="0.86" />
+          <stop offset="100%" stopColor="#36cbd7" stopOpacity="0.42" />
+        </radialGradient>
+        <radialGradient cx="42%" cy="36%" id="soilGradient" r="72%">
+          <stop offset="0%" stopColor="#8d6740" />
+          <stop offset="62%" stopColor="#5d422a" />
+          <stop offset="100%" stopColor="#2d2118" />
+        </radialGradient>
+        <linearGradient id="waterTrail" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#d9ffff" stopOpacity="0" />
+          <stop offset="24%" stopColor="#9ff8ff" stopOpacity="0.48" />
+          <stop offset="100%" stopColor="#44d9e4" stopOpacity="0" />
+        </linearGradient>
+        <linearGradient id="washSheet" x1="0" x2="0" y1="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0" />
+          <stop offset="42%" stopColor="#c8fbff" stopOpacity="0.36" />
+          <stop offset="100%" stopColor="#70e6ee" stopOpacity="0" />
+        </linearGradient>
+        <filter colorInterpolationFilters="sRGB" id="dropletShadow">
+          <feDropShadow dx="0" dy="4" floodColor="#006a79" floodOpacity="0.22" stdDeviation="3" />
+        </filter>
+      </defs>
+
+      <g className="mix-blend-multiply">
+        {soilParticles.map((particle) => {
+          const timing = makeSoilTiming(particle);
+
+          return (
+            <circle
+              cx={particle.x}
+              cy={particle.y}
+              fill="url(#soilGradient)"
+              key={`${particle.x}-${particle.y}`}
+              opacity="0"
+              r="0.2"
+            >
+              <animate
+                attributeName="r"
+                begin="0s"
+                dur={washCycle}
+                keyTimes={timing.keyTimes}
+                repeatCount="indefinite"
+                values={timing.radius}
+              />
+              <animate
+                attributeName="opacity"
+                begin="0s"
+                dur={washCycle}
+                keyTimes={timing.keyTimes}
+                repeatCount="indefinite"
+                values={timing.opacity}
+              />
+              <animateTransform
+                additive="sum"
+                attributeName="transform"
+                begin="0s"
+                dur={washCycle}
+                keyTimes={timing.keyTimes}
+                repeatCount="indefinite"
+                type="translate"
+                values={timing.transform}
+              />
+            </circle>
+          );
+        })}
+      </g>
+
+      <path
+        d="M0 76 C70 98 110 56 184 84 C260 112 306 62 420 92 L420 166 C322 132 260 178 186 142 C112 106 66 154 0 124 Z"
+        fill="url(#washSheet)"
+        opacity="0.62"
+      >
+        <animateTransform
+          attributeName="transform"
+          dur={washCycle}
+          keyTimes="0;0.3;0.7;0.86;1"
+          repeatCount="indefinite"
+          type="translate"
+          values="0 -190;0 -190;0 540;0 540;0 -190"
+        />
+      </path>
+
+      {trails.map((path, index) => (
+        <path
+          d={path}
+          fill="none"
+          key={path}
+          opacity="0"
+          stroke="url(#waterTrail)"
+          strokeDasharray="150 470"
+          strokeLinecap="round"
+          strokeWidth={index === 2 ? 9 : 7}
+        >
+          <animate
+            attributeName="opacity"
+            begin="0s"
+            dur={washCycle}
+            keyTimes="0;0.3;0.38;0.68;0.82;1"
+            repeatCount="indefinite"
+            values="0;0;0.7;0.26;0;0"
+          />
+          <animate
+            attributeName="stroke-dashoffset"
+            begin="0s"
+            dur={washCycle}
+            keyTimes="0;0.3;0.38;0.68;0.82;1"
+            repeatCount="indefinite"
+            values="440;440;260;-260;-620;-620"
+          />
+        </path>
+      ))}
+
+      <g filter="url(#dropletShadow)">
+        {surfaceBeads.map((bead) => {
+          const timing = makeBeadTiming(bead);
+
+          return (
+            <circle
+              cx={bead.x}
+              cy={bead.y}
+              fill="url(#dropGradient)"
+              key={`${bead.x}-${bead.y}`}
+              opacity="0"
+              r={bead.r}
+            >
+              <animate
+                attributeName="opacity"
+                begin="0s"
+                dur={washCycle}
+                keyTimes={timing.keyTimes}
+                repeatCount="indefinite"
+                values={timing.opacity}
+              />
+              <animateTransform
+                attributeName="transform"
+                begin="0s"
+                dur={washCycle}
+                keyTimes={timing.keyTimes}
+                repeatCount="indefinite"
+                type="translate"
+                values={timing.transform}
+              />
+            </circle>
+          );
+        })}
+      </g>
+
+      {droplets.map((drop) => (
+        <g
+          filter="url(#dropletShadow)"
+          key={`${drop.x}-${drop.delay}`}
+          opacity="0"
+          transform={`translate(${drop.x} -48)`}
+        >
+          <animate
+            attributeName="opacity"
+            begin="0s"
+            dur={washCycle}
+            keyTimes="0;0.3;0.38;0.68;0.82;1"
+            repeatCount="indefinite"
+            values="0;0;0.94;0.72;0;0"
+          />
+          <animateTransform
+            attributeName="transform"
+            begin="0s"
+            dur={washCycle}
+            keyTimes="0;0.3;0.38;0.68;0.82;1"
+            repeatCount="indefinite"
+            type="translate"
+            values={`${drop.x} -56;${drop.x} -56;${drop.x + drop.dx * 0.35} 124;${drop.x + drop.dx} 382;${drop.x + drop.dx * 1.2} 612;${drop.x} -56`}
+            />
+          <g transform={`scale(${drop.scale})`}>
+            <ellipse cx="0" cy="0" fill="url(#dropGradient)" rx="6.2" ry="10.8" />
+            <ellipse cx="-2.1" cy="-4.2" fill="#ffffff" opacity="0.88" rx="1.7" ry="3" />
+          </g>
+        </g>
+      ))}
+
+      <g opacity="0.44">
+        <path
+          d="M30 502 C94 486 146 520 208 504 C272 486 318 520 392 500"
+          fill="none"
+          stroke="#7a5735"
+          strokeLinecap="round"
+          strokeWidth="8"
+        >
+          <animate
+            attributeName="opacity"
+            dur={washCycle}
+            keyTimes="0;0.56;0.68;0.78;1"
+            repeatCount="indefinite"
+            values="0;0;0.5;0;0"
+          />
+        </path>
+      </g>
+    </svg>
   );
 }
 
@@ -313,7 +680,7 @@ export function PatternLabContent() {
           <p className="m-0 max-w-[43rem] text-sm leading-6 text-[#a7bbb8] lg:pb-1">
             A compact view of the surface layouts behind the coating concept:
             equal alternating bands, a smoother wettability transition, and
-            square paths that separate hydrophilic wetting from hydrophobic
+            rectangular paths that separate hydrophilic wetting from hydrophobic
             droplet release.
           </p>
         </div>
@@ -325,7 +692,7 @@ export function PatternLabContent() {
             visual={<MiniStripeSurface />}
             paragraphs={[
               "The baseline layout uses equal-width hydrophilic and hydrophobic bands so every water path crosses the same amount of each surface.",
-              "White hydrophilic bands spread water to wet dust and mineral residue. Baby-blue dotted hydrophobic bands create release zones that help droplets keep moving.",
+              "Hydrophilic bands spread water to wet dust and mineral residue. Dotted hydrophobic bands create release zones that help droplets keep moving.",
               "This pattern is the clearest production direction because it is easy to manufacture, easy to inspect, and directly aligned with downward droplet travel."
             ]}
           />
@@ -343,23 +710,12 @@ export function PatternLabContent() {
 
           <PatternStudy
             eyebrow="Future geometry"
-            title="Concentric square transport paths"
+            title="Concentric rectangular transport paths"
             visual={<TestingVisual kind="rings" />}
             paragraphs={[
-              "Square paths test whether geometry can steer dirty water outward as well as downward.",
-              "The white squares are hydrophilic wetting zones. The dotted baby-blue squares are hydrophobic release paths, made more visible here so the alternating behavior is clear.",
+              "Rectangular paths test whether geometry can steer dirty water outward as well as downward.",
+              "The clean rectangular channels are hydrophilic wetting zones. The dotted rectangular bands are hydrophobic release paths, made more visible here so the alternating behavior is clear.",
               "This layout keeps large transparent areas while adding repeated release paths around the surface."
-            ]}
-          />
-
-          <PatternStudy
-            eyebrow="Flow variant"
-            title="Nested release channels"
-            visual={<TestingVisual kind="nested" />}
-            paragraphs={[
-              "This variant keeps the square geometry but increases the number of visible hydrophobic paths.",
-              "Dotted baby-blue channels show where droplets should release and accelerate. Plain white zones show where water can spread before release.",
-              "It gives the same concept a more directional layout for surfaces that need stronger edge-to-edge transport."
             ]}
           />
         </div>
@@ -438,59 +794,77 @@ function MiniStripeSurface() {
   );
 }
 
-function TestingVisual({ kind }: { kind: "gradient" | "rings" | "nested" }) {
-  const ringClasses = [
-    { className: "h-[88%] w-[88%]", hydrophobic: true },
-    { className: "h-[66%] w-[66%]", hydrophobic: false },
-    { className: "h-[44%] w-[44%]", hydrophobic: true },
-    { className: "h-[22%] w-[22%]", hydrophobic: false }
-  ];
-  const nestedClasses = [
-    { className: "h-[92%] w-[92%]", hydrophobic: false },
-    { className: "h-[78%] w-[78%]", hydrophobic: true },
-    { className: "h-[62%] w-[62%]", hydrophobic: false },
-    { className: "h-[48%] w-[48%]", hydrophobic: true },
-    { className: "h-[32%] w-[32%]", hydrophobic: false },
-    { className: "h-[18%] w-[18%]", hydrophobic: true }
-  ];
-
+function TestingVisual({ kind }: { kind: "gradient" | "rings" }) {
   return (
     <div
       className={cx(
         "relative aspect-[1.35/1] w-full max-w-[300px] overflow-hidden border border-white/15",
         kind === "gradient" &&
           "bg-[linear-gradient(180deg,#ffffff_0_26%,#effcff_44%,#9ee7ff_100%)]",
-        kind === "rings" &&
-          "grid place-items-center bg-[#ffffff]",
-        kind === "nested" && "grid place-items-center bg-[#ffffff]"
+        kind === "rings" && "grid place-items-center bg-[#ffffff]"
       )}
     >
-      {kind === "rings" &&
-        ringClasses.map((ring) => (
-          <span
-            className={cx(
-              "absolute",
-              ring.className,
-              ring.hydrophobic
-                ? "border-[14px] border-[#9ee7ff] bg-[radial-gradient(circle,rgba(0,65,92,0.42)_0_1.15px,transparent_1.85px)] [background-size:8px_8px]"
-                : "border-[14px] border-white bg-white shadow-[inset_0_0_0_1px_rgba(6,17,22,0.08)]"
-            )}
-            key={ring.className}
-          />
-        ))}
-      {kind === "nested" &&
-        nestedClasses.map((ring) => (
-          <span
-            className={cx(
-              "absolute",
-              ring.className,
-              ring.hydrophobic
-                ? "border-[10px] border-[#9ee7ff] bg-[radial-gradient(circle,rgba(0,65,92,0.45)_0_1.1px,transparent_1.8px)] [background-size:7px_7px]"
-                : "border-[10px] border-white bg-white shadow-[inset_0_0_0_1px_rgba(6,17,22,0.08)]"
-            )}
-            key={ring.className}
-          />
-        ))}
+      {kind === "rings" && (
+        <ConcentricTransportPattern
+          className="absolute inset-3"
+          idPrefix="lab-transport"
+        />
+      )}
     </div>
+  );
+}
+
+function ConcentricTransportPattern({
+  className,
+  idPrefix
+}: {
+  className?: string;
+  idPrefix: string;
+}) {
+  const dotId = `${idPrefix}-dots`;
+  const hydrophobicPath = [
+    "M20 18H280V204H20Z M44 42H256V180H44Z",
+    "M68 64H232V158H68Z M92 84H208V138H92Z",
+    "M112 95H188V127H112Z M130 105H170V117H130Z"
+  ].join(" ");
+  const hydrophilicGuides = [
+    { height: 138, width: 212, x: 44, y: 42 },
+    { height: 54, width: 116, x: 92, y: 84 },
+    { height: 12, width: 40, x: 130, y: 105 }
+  ];
+
+  return (
+    <svg
+      aria-hidden="true"
+      className={className}
+      preserveAspectRatio="xMidYMid meet"
+      viewBox="0 0 300 222"
+    >
+      <defs>
+        <pattern
+          height="8"
+          id={dotId}
+          patternUnits="userSpaceOnUse"
+          width="8"
+        >
+          <circle cx="2" cy="2" fill="rgba(0,65,92,0.48)" r="1.15" />
+        </pattern>
+      </defs>
+      <rect fill="#ffffff" height="222" width="300" />
+      <path d={hydrophobicPath} fill="#9ee7ff" fillRule="evenodd" />
+      <path d={hydrophobicPath} fill={`url(#${dotId})`} fillRule="evenodd" />
+      <g fill="none" stroke="#dfe7e7" strokeWidth="1.25">
+        <rect height="186" width="260" x="20" y="18" />
+        {hydrophilicGuides.map((guide) => (
+          <rect
+            height={guide.height}
+            key={`${guide.x}-${guide.y}`}
+            width={guide.width}
+            x={guide.x}
+            y={guide.y}
+          />
+        ))}
+      </g>
+    </svg>
   );
 }
