@@ -12,7 +12,6 @@ import {
 } from "react";
 import {
   geoCentroid,
-  geoContains,
   geoEquirectangular,
   geoPath
 } from "d3-geo";
@@ -78,7 +77,21 @@ type HoveredRegion = {
 type GlobeFocus = {
   latitude: number;
   longitude: number;
-  snap?: boolean;
+};
+
+type GlobePick = {
+  coordinates: [number, number];
+  geo: RegionFeature;
+};
+
+type CoordinatePair = [number, number];
+type LinearRingCoordinates = CoordinatePair[];
+type PolygonCoordinates = LinearRingCoordinates[];
+type FeatureHitMap = {
+  data: Uint8ClampedArray;
+  featuresByColor: Map<number, RegionFeature>;
+  height: number;
+  width: number;
 };
 
 const pages: Array<{ id: PageId; label: string; href: string }> = [
@@ -202,7 +215,7 @@ const marineZones: MarineZone[] = [
     latitude: 0,
     temperature: "Warm tropical belts with cooler currents",
     waterContent: "Very high humidity and storm exposure",
-    note: "High water availability reduces hydrophobic frequency needs."
+    note: "High water availability reduces the need for frequent hydrophobic release bands."
   },
   {
     id: "indian-ocean",
@@ -232,7 +245,7 @@ const marineZones: MarineZone[] = [
     latitude: -58,
     temperature: "Cold water and storms",
     waterContent: "Very high spray and wind exposure",
-    note: "Frequent wetting makes aggressive hydrophobic strip frequency unnecessary."
+    note: "Frequent wetting reduces the need for dense hydrophobic release bands."
   },
   {
     id: "mediterranean-sea",
@@ -322,7 +335,7 @@ const marineZones: MarineZone[] = [
     latitude: 27,
     temperature: "Very warm shallow water",
     waterContent: "High salinity, high evaporation",
-    note: "Salt and regional dust call for a stronger hydrophobic release frequency."
+    note: "Salt and regional dust call for a denser hydrophobic release pattern."
   },
   {
     id: "black-sea",
@@ -428,12 +441,21 @@ const worldFeatures = atlasFeatures(worldMap, "countries");
 const stateFeatures = atlasFeatures(usMap, "states");
 const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
 const earthTextureUrl = `${basePath}/textures/earth-8192.jpg`;
+const earthUltraTextureUrl = `${basePath}/textures/earth-16384.jpg`;
 const earthBumpTextureUrl =
   "https://unpkg.com/three-globe/example/img/earth-topology.png";
 const earthWaterTextureUrl =
   "https://unpkg.com/three-globe/example/img/earth-water.png";
 const cloudsTextureUrl =
   "https://unpkg.com/globe.gl/example/clouds/clouds.png";
+const degenerateFeatureHitRadiusDegrees = 0.045;
+const globeManualTiltLimit = Math.PI / 2;
+const globeFocusLatitudeLimit = 78;
+const featureHitMapWidth = 4096;
+const featureHitMapHeight = 2048;
+const tinyFeatureHitRadius = 4;
+const borderTextureSeamGuardPixels = 24;
+const ultraEarthTextureSize = 16384;
 
 function atlasFeatures(data: unknown, key: string): RegionFeature[] {
   const topology = data as { objects: Record<string, unknown> };
@@ -443,6 +465,63 @@ function atlasFeatures(data: unknown, key: string): RegionFeature[] {
   ) as unknown as FeatureCollection<Geometry, { name?: string }>;
 
   return collection.features as RegionFeature[];
+}
+
+type NavigatorWithPerformanceHints = Navigator & {
+  connection?: {
+    effectiveType?: string;
+    saveData?: boolean;
+  };
+  deviceMemory?: number;
+};
+
+function configureTexture(texture: THREE.Texture, anisotropy: number) {
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = anisotropy;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.wrapS = THREE.RepeatWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+}
+
+function configureBorderTexture(texture: THREE.CanvasTexture, anisotropy: number) {
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = anisotropy;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.wrapS = THREE.ClampToEdgeWrapping;
+  texture.wrapT = THREE.ClampToEdgeWrapping;
+}
+
+function shouldLoadUltraEarthTexture(renderer: THREE.WebGLRenderer) {
+  const navigatorHints = navigator as NavigatorWithPerformanceHints;
+  const connection = navigatorHints.connection;
+  const memory = navigatorHints.deviceMemory ?? 0;
+  const cores = navigator.hardwareConcurrency ?? 0;
+
+  if (renderer.capabilities.maxTextureSize < ultraEarthTextureSize) return false;
+  if (window.matchMedia("(pointer: coarse)").matches) return false;
+  if (connection?.saveData) return false;
+  if (connection?.effectiveType === "slow-2g" || connection?.effectiveType === "2g") {
+    return false;
+  }
+  if (memory > 0 && memory < 8) return false;
+  if (cores > 0 && cores < 8) return false;
+
+  return true;
+}
+
+async function textureUrlExists(url: string) {
+  try {
+    const response = await fetch(url, {
+      cache: "force-cache",
+      method: "HEAD"
+    });
+    return response.ok;
+  } catch {
+    return false;
+  }
 }
 
 function cx(...classes: Array<string | false | null | undefined>) {
@@ -458,12 +537,225 @@ function nearestEquivalentAngle(angle: number, reference: number) {
   return angle + Math.round((reference - angle) / fullTurn) * fullTurn;
 }
 
-function coordinatesFromFeature(geo: RegionFeature): [number, number] {
-  const centroid = geoCentroid(geo);
-  const longitude = Number.isFinite(centroid[0]) ? centroid[0] : 0;
-  const latitude = Number.isFinite(centroid[1]) ? centroid[1] : 0;
+function longitudeDistance(a: number, b: number) {
+  return Math.abs(((a - b + 540) % 360) - 180);
+}
 
-  return [longitude, latitude];
+function coordinateDistanceDegrees(
+  a: [number, number],
+  b: [number, number]
+) {
+  return Math.hypot(longitudeDistance(a[0], b[0]), a[1] - b[1]);
+}
+
+function normalizeLongitudeToReference(longitude: number, reference: number) {
+  return reference + ((((longitude - reference) + 540) % 360) - 180);
+}
+
+function pointOnSegment(
+  point: CoordinatePair,
+  start: CoordinatePair,
+  end: CoordinatePair
+) {
+  const cross =
+    (point[1] - start[1]) * (end[0] - start[0]) -
+    (point[0] - start[0]) * (end[1] - start[1]);
+  if (Math.abs(cross) > 1e-8) return false;
+
+  const lengthSquared =
+    (end[0] - start[0]) ** 2 + (end[1] - start[1]) ** 2;
+  if (lengthSquared <= 1e-12) {
+    return Math.hypot(point[0] - start[0], point[1] - start[1]) <= 1e-8;
+  }
+
+  const dot =
+    (point[0] - start[0]) * (end[0] - start[0]) +
+    (point[1] - start[1]) * (end[1] - start[1]);
+  if (dot < 0) return false;
+
+  return dot <= lengthSquared + 1e-8;
+}
+
+function ringContainsCoordinate(
+  ring: LinearRingCoordinates,
+  point: CoordinatePair
+) {
+  if (ring.length < 3) return false;
+
+  let inside = false;
+  const testPoint: CoordinatePair = [point[0], point[1]];
+
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index, index += 1) {
+    const currentPoint: CoordinatePair = [
+      normalizeLongitudeToReference(ring[index][0], testPoint[0]),
+      ring[index][1]
+    ];
+    const previousPoint: CoordinatePair = [
+      normalizeLongitudeToReference(ring[previous][0], testPoint[0]),
+      ring[previous][1]
+    ];
+
+    if (pointOnSegment(testPoint, previousPoint, currentPoint)) return true;
+
+    const intersects =
+      currentPoint[1] > testPoint[1] !== previousPoint[1] > testPoint[1] &&
+      testPoint[0] <
+        ((previousPoint[0] - currentPoint[0]) *
+          (testPoint[1] - currentPoint[1])) /
+          (previousPoint[1] - currentPoint[1]) +
+          currentPoint[0];
+
+    if (intersects) inside = !inside;
+  }
+
+  return inside;
+}
+
+function polygonContainsCoordinate(
+  polygon: PolygonCoordinates,
+  point: CoordinatePair
+) {
+  const [outerRing, ...holes] = polygon;
+  if (!outerRing || !ringContainsCoordinate(outerRing, point)) return false;
+
+  return !holes.some((hole) => ringContainsCoordinate(hole, point));
+}
+
+function geometryContainsCoordinate(
+  geometry: Geometry,
+  point: CoordinatePair
+): boolean {
+  if (geometry.type === "Polygon") {
+    return polygonContainsCoordinate(
+      geometry.coordinates as PolygonCoordinates,
+      point
+    );
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    return (geometry.coordinates as PolygonCoordinates[]).some((polygon) =>
+      polygonContainsCoordinate(polygon, point)
+    );
+  }
+
+  if (geometry.type === "GeometryCollection") {
+    return geometry.geometries.some((item) =>
+      geometryContainsCoordinate(item, point)
+    );
+  }
+
+  return false;
+}
+
+function ringAreaDegrees(ring: LinearRingCoordinates) {
+  if (ring.length < 3) return 0;
+
+  const referenceLongitude = ring[0][0];
+  let area = 0;
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index, index += 1) {
+    const currentX = normalizeLongitudeToReference(
+      ring[index][0],
+      referenceLongitude
+    );
+    const previousX = normalizeLongitudeToReference(
+      ring[previous][0],
+      referenceLongitude
+    );
+    area += previousX * ring[index][1] - currentX * ring[previous][1];
+  }
+
+  return Math.abs(area) / 2;
+}
+
+function polygonAreaDegrees(polygon: PolygonCoordinates) {
+  const [outerRing, ...holes] = polygon;
+  if (!outerRing) return 0;
+
+  const holesArea = holes.reduce((total, hole) => total + ringAreaDegrees(hole), 0);
+  return Math.max(0, ringAreaDegrees(outerRing) - holesArea);
+}
+
+function geometryAreaDegrees(geometry: Geometry): number {
+  if (geometry.type === "Polygon") {
+    return polygonAreaDegrees(geometry.coordinates as PolygonCoordinates);
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    return (geometry.coordinates as PolygonCoordinates[]).reduce(
+      (total, polygon) => total + polygonAreaDegrees(polygon),
+      0
+    );
+  }
+
+  if (geometry.type === "GeometryCollection") {
+    return geometry.geometries.reduce(
+      (total, item) => total + geometryAreaDegrees(item),
+      0
+    );
+  }
+
+  return 0;
+}
+
+function collectGeometryCoordinates(geometry: Geometry): Array<[number, number]> {
+  const points: Array<[number, number]> = [];
+
+  const collect = (coordinates: unknown) => {
+    if (
+      Array.isArray(coordinates) &&
+      typeof coordinates[0] === "number" &&
+      typeof coordinates[1] === "number"
+    ) {
+      points.push([coordinates[0], coordinates[1]]);
+      return;
+    }
+
+    if (Array.isArray(coordinates)) {
+      coordinates.forEach(collect);
+    }
+  };
+
+  if (geometry.type === "GeometryCollection") {
+    geometry.geometries.forEach((item) => {
+      points.push(...collectGeometryCoordinates(item));
+    });
+  } else {
+    collect((geometry as { coordinates: unknown }).coordinates);
+  }
+
+  return points;
+}
+
+function coordinatesFromFeature(
+  geo: RegionFeature,
+  preferredCoordinates?: [number, number]
+): [number, number] {
+  if (
+    preferredCoordinates &&
+    Number.isFinite(preferredCoordinates[0]) &&
+    Number.isFinite(preferredCoordinates[1])
+  ) {
+    return preferredCoordinates;
+  }
+
+  const centroid = geoCentroid(geo);
+  if (
+    Number.isFinite(centroid[0]) &&
+    Number.isFinite(centroid[1]) &&
+    geometryContainsCoordinate(geo.geometry, centroid)
+  ) {
+    return centroid;
+  }
+
+  const containedPoint = collectGeometryCoordinates(geo.geometry).find((point) =>
+    geometryContainsCoordinate(geo.geometry, point)
+  );
+  if (containedPoint) return containedPoint;
+
+  return [
+    Number.isFinite(centroid[0]) ? centroid[0] : 0,
+    Number.isFinite(centroid[1]) ? centroid[1] : 0
+  ];
 }
 
 function estimatedAnnualTilt(latitude: number, category: CategoryId) {
@@ -572,10 +864,11 @@ function buildRecommendation({
 
 function recommendationFromGeo(
   geo: RegionFeature,
-  scope: "Country" | "U.S. State"
+  scope: "Country" | "U.S. State",
+  coordinates?: [number, number]
 ): RegionRecommendation {
   const name = geo.properties?.name ?? "Selected region";
-  const [longitude, latitude] = coordinatesFromFeature(geo);
+  const [longitude, latitude] = coordinatesFromFeature(geo, coordinates);
   const category = categoryForFeature(geo, scope);
 
   return buildRecommendation({
@@ -606,17 +899,125 @@ function recommendationFromMarine(zone: MarineZone): RegionRecommendation {
   });
 }
 
-function findFeatureAtPoint(features: RegionFeature[], longitude: number, latitude: number) {
-  return features.find((geo) => geoContains(geo, [longitude, latitude]));
+function featureColorId(index: number) {
+  return index + 1;
 }
 
-function createBorderTexture({
-  mode,
-  selectedId
-}: {
-  mode: GlobeMode;
-  selectedId?: string;
-}) {
+function featureColorStyle(id: number) {
+  const red = id & 255;
+  const green = (id >> 8) & 255;
+  const blue = (id >> 16) & 255;
+  return `rgb(${red}, ${green}, ${blue})`;
+}
+
+function createFeatureHitMap(features: RegionFeature[]): FeatureHitMap {
+  const canvas = document.createElement("canvas");
+  canvas.width = featureHitMapWidth;
+  canvas.height = featureHitMapHeight;
+
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context) {
+    return {
+      data: new Uint8ClampedArray(featureHitMapWidth * featureHitMapHeight * 4),
+      featuresByColor: new Map(),
+      height: featureHitMapHeight,
+      width: featureHitMapWidth
+    };
+  }
+
+  const projection = geoEquirectangular()
+    .translate([featureHitMapWidth / 2, featureHitMapHeight / 2])
+    .scale(featureHitMapWidth / (Math.PI * 2));
+  const path = geoPath(projection, context);
+  const featuresByColor = new Map<number, RegionFeature>();
+  const drawQueue = features
+    .map((geo, index) => ({
+      area: path.area(geo),
+      colorId: featureColorId(index),
+      geo
+    }))
+    .sort((a, b) => b.area - a.area);
+
+  context.clearRect(0, 0, featureHitMapWidth, featureHitMapHeight);
+  drawQueue.forEach(({ area, colorId, geo }) => {
+    context.fillStyle = featureColorStyle(colorId);
+    context.beginPath();
+    path(geo);
+    context.fill("evenodd");
+
+    if (area < tinyFeatureHitRadius * tinyFeatureHitRadius) {
+      const centroid = projection(geoCentroid(geo));
+      if (centroid) {
+        context.beginPath();
+        context.arc(centroid[0], centroid[1], tinyFeatureHitRadius, 0, Math.PI * 2);
+        context.fill();
+      }
+    }
+
+    featuresByColor.set(colorId, geo);
+  });
+
+  return {
+    data: context.getImageData(0, 0, featureHitMapWidth, featureHitMapHeight).data,
+    featuresByColor,
+    height: featureHitMapHeight,
+    width: featureHitMapWidth
+  };
+}
+
+function featureFromHitMap(
+  hitMap: FeatureHitMap,
+  longitude: number,
+  latitude: number
+) {
+  const wrappedLongitude = (((longitude + 180) % 360) + 360) % 360;
+  const x = clamp(
+    Math.floor((wrappedLongitude / 360) * hitMap.width),
+    0,
+    hitMap.width - 1
+  );
+  const y = clamp(
+    Math.floor(((90 - clamp(latitude, -90, 90)) / 180) * hitMap.height),
+    0,
+    hitMap.height - 1
+  );
+  const offset = (y * hitMap.width + x) * 4;
+  const colorId =
+    hitMap.data[offset] +
+    (hitMap.data[offset + 1] << 8) +
+    (hitMap.data[offset + 2] << 16);
+
+  return colorId ? hitMap.featuresByColor.get(colorId) : undefined;
+}
+
+function degenerateFeatureAtPoint(
+  features: RegionFeature[],
+  longitude: number,
+  latitude: number
+) {
+  const point: [number, number] = [longitude, latitude];
+  const degenerateMatches = features.filter((geo) => {
+    if (geometryAreaDegrees(geo.geometry) >= 1e-8) return false;
+    const centroid = coordinatesFromFeature(geo);
+    return coordinateDistanceDegrees(point, centroid) <= degenerateFeatureHitRadiusDegrees;
+  });
+
+  return degenerateMatches[0];
+}
+
+function findFeatureAtPoint(
+  hitMap: FeatureHitMap,
+  features: RegionFeature[],
+  longitude: number,
+  latitude: number
+) {
+  return (
+    featureFromHitMap(hitMap, longitude, latitude) ??
+    degenerateFeatureAtPoint(features, longitude, latitude)
+  );
+}
+
+function createBorderTexture({ mode }: { mode: GlobeMode }) {
   const width = 8192;
   const height = 4096;
   const canvas = document.createElement("canvas");
@@ -633,36 +1034,30 @@ function createBorderTexture({
   const path = geoPath(projection, context);
 
   worldFeatures.forEach((geo) => {
-    const name = geo.properties?.name ?? "";
-    const isSelected = selectedId === `Country-${geo.id ?? name}`;
-
     context.beginPath();
     path(geo);
-    if (isSelected) {
-      context.fillStyle = "rgba(158, 231, 255, 0.18)";
-      context.fill();
-    }
     context.strokeStyle = "rgba(0, 0, 0, 0.9)";
-    context.lineWidth = isSelected ? 4.6 : 3.2;
+    context.lineWidth = 3.2;
     context.stroke();
   });
 
   if (mode === "us") {
     stateFeatures.forEach((geo) => {
-      const name = geo.properties?.name ?? "";
-      const isSelected = selectedId === `U.S. State-${geo.id ?? name}`;
-
       context.beginPath();
       path(geo);
-      if (isSelected) {
-        context.fillStyle = "rgba(158, 231, 255, 0.2)";
-        context.fill();
-      }
       context.strokeStyle = "rgba(0, 0, 0, 0.94)";
-      context.lineWidth = isSelected ? 4.8 : 3.6;
+      context.lineWidth = 3.6;
       context.stroke();
     });
   }
+
+  context.clearRect(0, 0, borderTextureSeamGuardPixels, height);
+  context.clearRect(
+    width - borderTextureSeamGuardPixels,
+    0,
+    borderTextureSeamGuardPixels,
+    height
+  );
 
   return canvas;
 }
@@ -684,7 +1079,11 @@ export default function Home() {
   );
 
   const selectGeo = useCallback(
-    (geo: RegionFeature, scope: "Country" | "U.S. State") => {
+    (
+      geo: RegionFeature,
+      scope: "Country" | "U.S. State",
+      coordinates?: [number, number]
+    ) => {
       const name = geo.properties?.name ?? "";
 
       if (scope === "Country" && name.includes("United States")) {
@@ -694,7 +1093,7 @@ export default function Home() {
         return;
       }
 
-      setSelectedRegion(recommendationFromGeo(geo, scope));
+      setSelectedRegion(recommendationFromGeo(geo, scope, coordinates));
     },
     []
   );
@@ -702,6 +1101,7 @@ export default function Home() {
   const selectMarine = useCallback((zone: MarineZone) => {
     setMapMode("world");
     setSelectedRegion(recommendationFromMarine(zone));
+    setHoveredRegion({ coordinates: zone.coordinates, name: zone.name });
   }, []);
 
   const returnToWorld = useCallback(() => {
@@ -801,7 +1201,11 @@ function OptimizerPanel({
   onHover: (region: HoveredRegion) => void;
   onMarineSelect: (zone: MarineZone) => void;
   onWorldView: () => void;
-  onSelect: (geo: RegionFeature, scope: "Country" | "U.S. State") => void;
+  onSelect: (
+    geo: RegionFeature,
+    scope: "Country" | "U.S. State",
+    coordinates?: [number, number]
+  ) => void;
   selectedProfile: (typeof categoryProfiles)[CategoryId] | null;
   selectedRegion: RegionRecommendation | null;
 }) {
@@ -809,12 +1213,7 @@ function OptimizerPanel({
     <section className="relative isolate min-h-[calc(100svh-72px)] overflow-hidden bg-[linear-gradient(180deg,#08191e_0%,#061116_46%,#041014_100%)] lg:h-[calc(100svh-72px)]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-30" />
       <div
-        className={cx(
-          "relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:h-[calc(100svh-72px)]",
-          selectedRegion
-            ? "lg:grid-cols-[320px_minmax(0,1fr)_360px]"
-            : "lg:grid-cols-[320px_minmax(0,1fr)]"
-        )}
+        className="relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:h-[calc(100svh-72px)] lg:grid-cols-[320px_minmax(0,1fr)]"
       >
         <aside className="z-10 order-2 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:order-1 lg:overflow-y-auto lg:border-t-0 lg:border-r [&::-webkit-scrollbar]:hidden">
           <div className="grid gap-5">
@@ -917,10 +1316,12 @@ function OptimizerPanel({
         </div>
 
         {selectedRegion && (
-          <RegionInspector
-            profile={selectedProfile}
-            selectedRegion={selectedRegion}
-          />
+          <div className="z-20 order-3 lg:absolute lg:inset-y-0 lg:right-0 lg:w-[360px]">
+            <RegionInspector
+              profile={selectedProfile}
+              selectedRegion={selectedRegion}
+            />
+          </div>
         )}
       </div>
     </section>
@@ -937,56 +1338,45 @@ function InteractiveGlobe({
   mode: GlobeMode;
   onHover: (region: HoveredRegion) => void;
   onMarineSelect: (zone: MarineZone) => void;
-  onSelect: (geo: RegionFeature, scope: "Country" | "U.S. State") => void;
+  onSelect: (
+    geo: RegionFeature,
+    scope: "Country" | "U.S. State",
+    coordinates?: [number, number]
+  ) => void;
   selectedRegion: RegionRecommendation | null;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const callbacksRef = useRef({ onHover, onMarineSelect, onSelect });
-  const selectedRef = useRef(selectedRegion);
-  const borderMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
   const focusRef = useRef<GlobeFocus | null>(null);
+  const [isGlobeReady, setIsGlobeReady] = useState(false);
 
   useEffect(() => {
     callbacksRef.current = { onHover, onMarineSelect, onSelect };
   }, [onHover, onMarineSelect, onSelect]);
 
   useEffect(() => {
-    selectedRef.current = selectedRegion;
-    focusRef.current = selectedRegion
+    focusRef.current = selectedRegion && selectedRegion.scope !== "Ocean / Sea"
       ? {
           longitude: selectedRegion.longitude,
-          latitude: selectedRegion.latitude,
-          snap: true
+          latitude: selectedRegion.latitude
         }
       : null;
-
-    const material = borderMaterialRef.current;
-    if (material) {
-      const currentTexture = material.map;
-      const texture = new THREE.CanvasTexture(
-        createBorderTexture({ mode, selectedId: selectedRegion?.id })
-      );
-      texture.colorSpace = THREE.SRGBColorSpace;
-      texture.anisotropy = 8;
-      material.map = texture;
-      material.needsUpdate = true;
-      currentTexture?.dispose();
-    }
-
-  }, [mode, selectedRegion]);
+  }, [selectedRegion]);
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
+    setIsGlobeReady(false);
 
     const activeFeatures = mode === "world" ? worldFeatures : stateFeatures;
+    const featureHitMap = createFeatureHitMap(activeFeatures);
     const scope = mode === "world" ? "Country" : "U.S. State";
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
       powerPreference: "high-performance"
     });
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2.5));
     renderer.setClearColor(0x000000, 0);
     container.appendChild(renderer.domElement);
     const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
@@ -1004,23 +1394,31 @@ function InteractiveGlobe({
 
     const textureLoader = new THREE.TextureLoader();
     textureLoader.setCrossOrigin("anonymous");
-    const earthTexture = textureLoader.load(earthTextureUrl);
-    earthTexture.colorSpace = THREE.SRGBColorSpace;
-    earthTexture.anisotropy = maxAnisotropy;
-    earthTexture.minFilter = THREE.LinearMipmapLinearFilter;
-    earthTexture.magFilter = THREE.LinearFilter;
+    let isDisposed = false;
+    let hasMarkedReady = false;
+    let ultraTextureTimer = 0;
+    const markGlobeReady = () => {
+      if (isDisposed || hasMarkedReady) return;
+      hasMarkedReady = true;
+      setIsGlobeReady(true);
+    };
+    const earthTexture = textureLoader.load(
+      earthTextureUrl,
+      markGlobeReady,
+      undefined,
+      markGlobeReady
+    );
+    configureTexture(earthTexture, maxAnisotropy);
+    const managedEarthTextures = new Set<THREE.Texture>([earthTexture]);
     const bumpTexture = textureLoader.load(earthBumpTextureUrl);
     bumpTexture.anisotropy = maxAnisotropy;
     const waterTexture = textureLoader.load(earthWaterTextureUrl);
     waterTexture.anisotropy = maxAnisotropy;
 
     const borderTexture = new THREE.CanvasTexture(
-      createBorderTexture({ mode, selectedId: selectedRef.current?.id })
+      createBorderTexture({ mode })
     );
-    borderTexture.colorSpace = THREE.SRGBColorSpace;
-    borderTexture.anisotropy = maxAnisotropy;
-    borderTexture.minFilter = THREE.LinearMipmapLinearFilter;
-    borderTexture.magFilter = THREE.LinearFilter;
+    configureBorderTexture(borderTexture, maxAnisotropy);
 
     const globeMaterial = new THREE.MeshPhongMaterial({
       bumpMap: bumpTexture,
@@ -1032,10 +1430,48 @@ function InteractiveGlobe({
     });
 
     const globe = new THREE.Mesh(
-      new THREE.SphereGeometry(2.5, 128, 96),
+      new THREE.SphereGeometry(2.5, 192, 128),
       globeMaterial
     );
     group.add(globe);
+
+    const loadUltraEarthTexture = () => {
+      if (!shouldLoadUltraEarthTexture(renderer)) return;
+
+      void textureUrlExists(earthUltraTextureUrl).then((exists) => {
+        if (!exists || isDisposed) return;
+
+        const ultraTexture = textureLoader.load(
+          earthUltraTextureUrl,
+          (loadedTexture) => {
+            if (isDisposed) {
+              loadedTexture.dispose();
+              managedEarthTextures.delete(loadedTexture);
+              return;
+            }
+
+            configureTexture(loadedTexture, maxAnisotropy);
+            const previousTexture = globeMaterial.map;
+            globeMaterial.map = loadedTexture;
+            globeMaterial.needsUpdate = true;
+
+            if (previousTexture && previousTexture !== loadedTexture) {
+              managedEarthTextures.delete(previousTexture);
+              previousTexture.dispose();
+            }
+          },
+          undefined,
+          () => {
+            managedEarthTextures.delete(ultraTexture);
+            ultraTexture.dispose();
+          }
+        );
+        managedEarthTextures.add(ultraTexture);
+      });
+    };
+
+    // Keep first render fast; only attempt the 16K swap after the globe is interactive.
+    ultraTextureTimer = window.setTimeout(loadUltraEarthTexture, 1400);
 
     const borderMaterial = new THREE.MeshBasicMaterial({
       depthWrite: false,
@@ -1044,9 +1480,8 @@ function InteractiveGlobe({
       polygonOffsetFactor: -1,
       transparent: true
     });
-    borderMaterialRef.current = borderMaterial;
     const borders = new THREE.Mesh(
-      new THREE.SphereGeometry(2.508, 128, 96),
+      new THREE.SphereGeometry(2.508, 192, 128),
       borderMaterial
     );
     group.add(borders);
@@ -1054,7 +1489,7 @@ function InteractiveGlobe({
     const cloudsTexture = textureLoader.load(cloudsTextureUrl);
     cloudsTexture.anisotropy = maxAnisotropy;
     const clouds = new THREE.Mesh(
-      new THREE.SphereGeometry(2.515, 96, 64),
+      new THREE.SphereGeometry(2.515, 128, 96),
       new THREE.MeshPhongMaterial({
         depthWrite: false,
         map: cloudsTexture,
@@ -1065,7 +1500,7 @@ function InteractiveGlobe({
     group.add(clouds);
 
     const atmosphere = new THREE.Mesh(
-      new THREE.SphereGeometry(2.56, 96, 64),
+      new THREE.SphereGeometry(2.56, 128, 96),
       new THREE.MeshBasicMaterial({
         color: 0x64fff0,
         opacity: 0.09,
@@ -1116,8 +1551,12 @@ function InteractiveGlobe({
     const currentRotation = new THREE.Vector2(0.1, -0.45);
     let pointerInside = false;
     let frameId = 0;
+    let lastHoverPick: GlobePick | null = null;
+    let lastHoverX = 0;
+    let lastHoverY = 0;
     let userHasDragged = false;
     const dragState = {
+      downPick: null as GlobePick | null,
       isDown: false,
       lastX: 0,
       lastY: 0,
@@ -1146,7 +1585,7 @@ function InteractiveGlobe({
       pointer.y = -(((event.clientY - bounds.top) / bounds.height) * 2 - 1);
     };
 
-    const pickRegion = (event: PointerEvent) => {
+    const pickRegion = (event: PointerEvent): GlobePick | null => {
       setPointer(event);
       raycaster.setFromCamera(pointer, camera);
 
@@ -1156,7 +1595,12 @@ function InteractiveGlobe({
       const localPoint = globe.worldToLocal(globeHit.point.clone()).normalize();
       const longitude = THREE.MathUtils.radToDeg(Math.atan2(-localPoint.z, localPoint.x));
       const latitude = THREE.MathUtils.radToDeg(Math.asin(localPoint.y));
-      const geo = findFeatureAtPoint(activeFeatures, longitude, latitude);
+      const geo = findFeatureAtPoint(
+        featureHitMap,
+        activeFeatures,
+        longitude,
+        latitude
+      );
 
       return geo
         ? {
@@ -1183,7 +1627,11 @@ function InteractiveGlobe({
         }
 
         targetRotation.y += deltaX * 0.0056;
-        targetRotation.x = clamp(targetRotation.x + deltaY * 0.005, -1.18, 1.18);
+        targetRotation.x = clamp(
+          targetRotation.x + deltaY * 0.005,
+          -globeManualTiltLimit,
+          globeManualTiltLimit
+        );
         currentRotation.copy(targetRotation);
         if (dragState.moved) userHasDragged = true;
         dragState.lastX = event.clientX;
@@ -1193,6 +1641,9 @@ function InteractiveGlobe({
       }
 
       const pick = pickRegion(event);
+      lastHoverPick = pick;
+      lastHoverX = event.clientX;
+      lastHoverY = event.clientY;
       renderer.domElement.style.cursor = pick ? "pointer" : "grab";
 
       if (pick?.geo) {
@@ -1210,6 +1661,7 @@ function InteractiveGlobe({
     const handlePointerLeave = () => {
       if (dragState.isDown) return;
       pointerInside = false;
+      lastHoverPick = null;
       renderer.domElement.style.cursor = "grab";
       callbacksRef.current.onHover({ name: "World view" });
     };
@@ -1224,6 +1676,11 @@ function InteractiveGlobe({
       dragState.lastX = event.clientX;
       dragState.lastY = event.clientY;
       dragState.moved = false;
+      dragState.downPick =
+        lastHoverPick &&
+        Math.hypot(event.clientX - lastHoverX, event.clientY - lastHoverY) < 12
+          ? lastHoverPick
+          : pickRegion(event);
       pointerInside = true;
       renderer.domElement.setPointerCapture(event.pointerId);
       renderer.domElement.style.cursor = "grabbing";
@@ -1239,9 +1696,10 @@ function InteractiveGlobe({
       renderer.domElement.releasePointerCapture(event.pointerId);
       renderer.domElement.style.cursor = "grab";
 
-      const pick = dragState.moved ? null : pickRegion(event);
-      if (pick?.geo) {
-        callbacksRef.current.onSelect(pick.geo, scope);
+      const clickPick = dragState.moved ? null : dragState.downPick;
+      dragState.downPick = null;
+      if (clickPick?.geo) {
+        callbacksRef.current.onSelect(clickPick.geo, scope, clickPick.coordinates);
       }
     };
 
@@ -1249,8 +1707,24 @@ function InteractiveGlobe({
       if (!dragState.isDown || dragState.pointerId !== event.pointerId) return;
       dragState.isDown = false;
       dragState.pointerId = -1;
+      dragState.downPick = null;
       currentRotation.copy(targetRotation);
       userHasDragged = userHasDragged || dragState.moved;
+      renderer.domElement.style.cursor = "grab";
+    };
+
+    const handleWheel = (event: WheelEvent) => {
+      event.preventDefault();
+      pointerInside = true;
+      focusRef.current = null;
+      userHasDragged = true;
+
+      const normalizedDelta = clamp(event.deltaY, -120, 120);
+      targetRotation.x = clamp(
+        targetRotation.x - normalizedDelta * 0.0035,
+        -globeManualTiltLimit,
+        globeManualTiltLimit
+      );
       renderer.domElement.style.cursor = "grab";
     };
 
@@ -1260,28 +1734,29 @@ function InteractiveGlobe({
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
     renderer.domElement.addEventListener("pointerup", handlePointerUp);
     renderer.domElement.addEventListener("pointercancel", handlePointerCancel);
+    renderer.domElement.addEventListener("wheel", handleWheel, { passive: false });
 
     const animate = () => {
       const focus = focusRef.current;
 
       if (focus) {
-        targetRotation.x = THREE.MathUtils.degToRad(clamp(focus.latitude, -52, 52));
+        targetRotation.x = THREE.MathUtils.degToRad(
+          clamp(focus.latitude, -globeFocusLatitudeLimit, globeFocusLatitudeLimit)
+        );
         targetRotation.y = nearestEquivalentAngle(
           THREE.MathUtils.degToRad(-90 - focus.longitude),
           currentRotation.y
         );
-        if (focus.snap) {
-          currentRotation.copy(targetRotation);
-          focus.snap = false;
-        }
-        camera.position.z += (5.82 - camera.position.z) * 0.045;
+        camera.position.z += (5.9 - camera.position.z) * 0.05;
       } else {
-        targetRotation.x += (0.08 - targetRotation.x) * 0.018;
-        if (!pointerInside && !userHasDragged) targetRotation.y += 0.0016;
+        if (!pointerInside && !userHasDragged) {
+          targetRotation.x += (0.08 - targetRotation.x) * 0.018;
+          targetRotation.y += 0.0016;
+        }
         camera.position.z += (8.25 - camera.position.z) * 0.04;
       }
 
-      const rotationEase = focus ? 0.18 : 0.06;
+      const rotationEase = focus ? 0.075 : 0.06;
       currentRotation.x += (targetRotation.x - currentRotation.x) * rotationEase;
       currentRotation.y += (targetRotation.y - currentRotation.y) * rotationEase;
       group.rotation.x = currentRotation.x;
@@ -1293,12 +1768,15 @@ function InteractiveGlobe({
 
       camera.lookAt(0, 0, 0);
       renderer.render(scene, camera);
+      if (earthTexture.image) markGlobeReady();
       frameId = window.requestAnimationFrame(animate);
     };
 
     animate();
 
     return () => {
+      isDisposed = true;
+      window.clearTimeout(ultraTextureTimer);
       window.cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
       renderer.domElement.removeEventListener("pointerenter", handlePointerEnter);
@@ -1307,10 +1785,11 @@ function InteractiveGlobe({
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
       renderer.domElement.removeEventListener("pointerup", handlePointerUp);
       renderer.domElement.removeEventListener("pointercancel", handlePointerCancel);
+      renderer.domElement.removeEventListener("wheel", handleWheel);
       renderer.dispose();
       globe.geometry.dispose();
       globeMaterial.dispose();
-      earthTexture.dispose();
+      managedEarthTextures.forEach((texture) => texture.dispose());
       bumpTexture.dispose();
       waterTexture.dispose();
       borders.geometry.dispose();
@@ -1323,7 +1802,6 @@ function InteractiveGlobe({
       (atmosphere.material as THREE.Material).dispose();
       starGeometry.dispose();
       (stars.material as THREE.Material).dispose();
-      borderMaterialRef.current = null;
       container.removeChild(renderer.domElement);
     };
   }, [mode]);
@@ -1337,6 +1815,16 @@ function InteractiveGlobe({
         role="application"
         aria-label="Interactive 3D globe region optimizer"
       />
+      {!isGlobeReady && (
+        <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-[#061116]/62 backdrop-blur-sm">
+          <div className="grid place-items-center gap-3">
+            <span className="h-12 w-12 rounded-full border-2 border-[#47e4d0]/20 border-t-[#47e4d0] animate-spin" />
+            <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#47e4d0] uppercase">
+              Loading globe
+            </span>
+          </div>
+        </div>
+      )}
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-[linear-gradient(0deg,#061116_0%,rgba(6,17,22,0.82)_32%,transparent_100%)]" />
     </div>
   );
@@ -1354,7 +1842,7 @@ function RegionInspector({
   }
 
   return (
-    <aside className="z-10 order-3 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-t-0 lg:border-l [&::-webkit-scrollbar]:hidden">
+    <aside className="z-10 order-3 h-full overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-t-0 lg:border-l [&::-webkit-scrollbar]:hidden">
       <div className="grid gap-6">
         <div className="grid gap-3">
           <div className="flex items-start justify-between gap-4">

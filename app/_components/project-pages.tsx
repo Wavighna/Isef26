@@ -100,7 +100,7 @@ export function ProductContent() {
                 className="group bg-[#47e4d0] px-5 py-3 text-sm font-black text-[#061116] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f0c86b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]"
                 href="/pattern-lab"
               >
-                See coating patterns
+                See coating patterns{" "}
                 <span className="inline-block pl-2 transition-transform duration-300 group-hover:translate-x-1">
                   -&gt;
                 </span>
@@ -144,7 +144,7 @@ export function ProductContent() {
                 The surface strategy centers on a simple insight: hydrophilic
                 regions spread water and help loosen adhered particles, while
                 hydrophobic microtextures help droplets move and carry loosened
-                debris away. The alternating surface coordinates
+                debris away. The alternating surface combines
                 both behaviors instead of relying on only one wetting regime.
               </p>
 
@@ -184,10 +184,10 @@ export function ProductContent() {
                 2.43% for hydrophobic controls.
               </p>
               <p className="m-0 max-w-[44rem] text-base leading-7 text-[#a7bbb8]">
-                Pattern density testing also shaped the product direction. Lower
-                laser-dot densities kept the surface hydrophobic while preserving
-                more light transmission, so 30% density was selected for later
-                cleaning trials.
+                Pattern density testing also shaped the product direction. In
+                those tests, 30% laser-dot density kept the surface hydrophobic
+                while preserving more light transmission, so it was selected for
+                later cleaning trials.
               </p>
             </div>
 
@@ -692,7 +692,7 @@ export function PatternLabContent() {
             visual={<MiniStripeSurface />}
             paragraphs={[
               "The baseline layout uses equal-width hydrophilic and hydrophobic bands so every water path crosses the same amount of each surface.",
-              "Hydrophilic bands spread water to wet dust and mineral residue. Dotted hydrophobic bands create release zones that help droplets keep moving.",
+              "Hydrophilic bands spread water across dust and mineral residue. Dotted hydrophobic bands create release zones that help droplets keep moving.",
               "This pattern is the clearest production direction because it is easy to manufacture, easy to inspect, and directly aligned with downward droplet travel."
             ]}
           />
@@ -714,7 +714,7 @@ export function PatternLabContent() {
             visual={<TestingVisual kind="rings" />}
             paragraphs={[
               "Rectangular paths test whether geometry can steer dirty water outward as well as downward.",
-              "The clean rectangular channels are hydrophilic wetting zones. The dotted rectangular bands are hydrophobic release paths, made more visible here so the alternating behavior is clear.",
+              "Plain rectangular channels are hydrophilic wetting zones. Dotted rectangular bands are hydrophobic release paths, made more visible here so the alternating behavior is clear.",
               "This layout keeps large transparent areas while adding repeated release paths around the surface."
             ]}
           />
