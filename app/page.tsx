@@ -34,6 +34,7 @@ type RegionRecommendation = {
   rainfall: string;
   dust: string;
   tilt: number;
+  tiltBasis: string;
   latitude: number;
   hydrophilic: number;
   hydrophobic: number;
@@ -424,8 +425,43 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function estimatedTilt(latitude: number) {
-  return Math.round(clamp(Math.abs(latitude), 10, 45));
+function estimatedAnnualTilt(latitude: number, category: CategoryId) {
+  const absoluteLatitude = Math.abs(latitude);
+  let tilt: number;
+
+  if (absoluteLatitude >= 50) {
+    tilt = 38;
+  } else if (absoluteLatitude >= 45) {
+    tilt = 35;
+  } else if (absoluteLatitude >= 35) {
+    tilt = 31;
+  } else if (absoluteLatitude >= 25) {
+    tilt = absoluteLatitude - 4;
+  } else {
+    tilt = absoluteLatitude;
+  }
+
+  if (category === "rainy-steep" || category === "polar-marine") {
+    tilt += 3;
+  }
+
+  if (category === "desert-flat") {
+    tilt -= 2;
+  }
+
+  return Math.round(clamp(tilt, 15, 45));
+}
+
+function tiltBasis(latitude: number, category: CategoryId) {
+  const absoluteLatitude = Math.round(Math.abs(latitude));
+  const winterTilt = Math.round(clamp(absoluteLatitude + 15, 15, 65));
+  const summerTilt = Math.round(clamp(absoluteLatitude - 15, 10, 25));
+
+  if (category === "rainy-steep" || category === "polar-marine") {
+    return `PVGIS annual estimate, raised for wet/cold cleaning; seasonal range ${summerTilt}-${winterTilt} deg.`;
+  }
+
+  return `PVGIS annual estimate from latitude; seasonal range ${summerTilt}-${winterTilt} deg.`;
 }
 
 function classifyCountry(name: string, latitude: number): CategoryId {
@@ -472,7 +508,8 @@ function buildRecommendation({
     scope,
     category,
     latitude,
-    tilt: estimatedTilt(latitude),
+    tilt: estimatedAnnualTilt(latitude, category),
+    tiltBasis: tiltBasis(latitude, category),
     note,
     ...profile,
     temperature: temperature ?? profile.temperature,
@@ -620,7 +657,16 @@ function HomePanel({ onExplore }: { onExplore: () => void }) {
       </div>
 
       <div className="hero-product" aria-label="Product mechanism diagram">
-        <div className="flow-arrow">Water flow</div>
+        <div className="solution-copy">
+          <p className="eyebrow">Alternating solution</p>
+          <h2>Capture the dirt first. Release the water next.</h2>
+          <p>
+            The overlay is patterned in the direction of droplet travel. Smooth
+            PMMA hydrophilic bands wet the dust, while dotted hydrophobic
+            micro-textured bands make the dirty water release and continue down
+            the panel.
+          </p>
+        </div>
         <VerticalStripDesign
           hydrophilic={62}
           hydrophobic={38}
@@ -669,7 +715,8 @@ function OptimizerPanel({
           <p className="scope-label">{selectedRegion.scope}</p>
 
           <div className="stat-grid">
-            <Stat label="Estimated tilt" value={`${selectedRegion.tilt} deg`} />
+            <Stat label="PVGIS-style fixed tilt" value={`${selectedRegion.tilt} deg`} />
+            <Stat label="Tilt basis" value={selectedRegion.tiltBasis} />
             <Stat label="Environmental type" value={selectedProfile.environment} />
             <Stat label="Water / rainfall" value={selectedRegion.rainfall} />
             <Stat label="Temperature" value={selectedRegion.temperature} />
@@ -714,7 +761,7 @@ function OptimizerPanel({
           <h1>{mapMode === "world" ? "Select a country, sea, or ocean" : "Select a U.S. state"}</h1>
           <p>
             The map estimates a business-prototype overlay pattern from climate,
-            moisture, dust risk, and panel tilt.
+            moisture, dust risk, and PVGIS-style annual tilt guidance.
           </p>
         </div>
         <button disabled={mapMode === "world"} onClick={onWorld} type="button">
@@ -767,11 +814,6 @@ function PatternsPanel() {
         description="Nested square bands test whether repeated perimeter transitions can move dust outward while preserving transparency."
         kind="rings"
         title="Square-ring gradient"
-      />
-      <TestingCard
-        description="Line-array variants increase directional transport paths without turning the full sheet hydrophobic."
-        kind="lines"
-        title="Dense line-array geometry"
       />
       <TestingCard
         description="Asymmetric band spacing tests whether non-uniform transitions reduce interfacial droplet pinning."
@@ -907,8 +949,9 @@ function VerticalStripDesign({
       className={`strip-design ${variant}`}
       role="img"
     >
-      <div className="water-flow-indicator">
-        <span>Water droplet flow</span>
+      <div className="water-flow-indicator" aria-hidden="true">
+        <span>Water flow</span>
+        <strong>down panel</strong>
       </div>
       <div className="strip-sheet">
         {strips.map((strip) => (
@@ -933,7 +976,7 @@ function TestingCard({
   title
 }: {
   description: string;
-  kind: "gradient" | "rings" | "lines" | "asymmetric";
+  kind: "gradient" | "rings" | "asymmetric";
   title: string;
 }) {
   return (
@@ -947,7 +990,6 @@ function TestingCard({
             <span />
           </>
         )}
-        {kind === "lines" && Array.from({ length: 12 }).map((_, index) => <span key={index} />)}
         {kind === "asymmetric" && Array.from({ length: 9 }).map((_, index) => <span key={index} />)}
       </div>
       <div>

@@ -1,17 +1,18 @@
 :root {
   --background: #f4f7f3;
   --surface: #ffffff;
-  --surface-soft: #eaf3ef;
+  --surface-soft: #eef5f2;
   --foreground: #132326;
   --muted: #5c6d70;
   --line: #d7e2df;
-  --hydrophilic: #8bd0ee;
-  --hydrophilic-strong: #2b9ac5;
-  --hydrophobic: #5a8fc8;
-  --hydrophobic-strong: #1b5fa7;
+  --hydrophilic: #d8f5f1;
+  --hydrophilic-strong: #2f9f93;
+  --hydrophobic: #f6b44b;
+  --hydrophobic-strong: #bc6a1f;
   --accent: #00856f;
-  --accent-dark: #0a4743;
-  --sand: #e8c96b;
+  --accent-dark: #103f3f;
+  --ink-panel: #112e33;
+  --sand: #f0c86b;
   --shadow: 0 18px 48px rgba(13, 36, 38, 0.12);
 }
 
@@ -124,19 +125,13 @@ button:disabled {
   padding: 24px;
 }
 
-.hero-screen {
-  align-items: stretch;
-  display: grid;
-  gap: 24px;
-  grid-template-columns: minmax(0, 0.95fr) minmax(380px, 1.05fr);
-}
-
 .hero-copy {
   align-content: center;
   background: var(--accent-dark);
   color: #f7fffd;
   display: grid;
   gap: 20px;
+  min-height: calc(100vh - 118px);
   padding: clamp(28px, 5vw, 70px);
 }
 
@@ -155,6 +150,7 @@ button:disabled {
 
 .hero-copy h1 {
   font-size: clamp(2.5rem, 5.5vw, 5.8rem);
+  max-width: 1050px;
 }
 
 .hero-copy p {
@@ -175,44 +171,36 @@ button:disabled {
 }
 
 .hero-product {
-  align-content: center;
+  align-content: start;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.72), rgba(234, 243, 239, 0.9)),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(237, 245, 242, 0.98)),
     var(--surface-soft);
   display: grid;
-  gap: 16px;
+  gap: 24px;
   justify-items: center;
+  min-height: calc(100vh - 70px);
   overflow: hidden;
-  padding: clamp(22px, 4vw, 48px);
+  padding: clamp(34px, 5vw, 72px) 24px;
   position: relative;
 }
 
-.flow-arrow {
-  align-items: center;
-  color: var(--accent-dark);
-  display: flex;
-  font-size: 0.82rem;
-  font-weight: 900;
-  gap: 10px;
-  text-transform: uppercase;
+.solution-copy {
+  max-width: 860px;
+  text-align: center;
 }
 
-.flow-arrow::before {
-  background: #f04438;
-  content: "";
-  display: block;
-  height: 76px;
-  width: 12px;
+.solution-copy h2 {
+  font-size: clamp(2rem, 4vw, 4.7rem);
+  letter-spacing: 0;
+  line-height: 1;
+  margin: 0 0 14px;
 }
 
-.flow-arrow::after {
-  border-left: 19px solid transparent;
-  border-right: 19px solid transparent;
-  border-top: 34px solid #f04438;
-  content: "";
-  left: calc(50% - 19px);
-  position: absolute;
-  top: 132px;
+.solution-copy p:last-child {
+  color: var(--muted);
+  font-size: 1.04rem;
+  line-height: 1.6;
+  margin: 0;
 }
 
 .product-caption {
@@ -249,27 +237,65 @@ button:disabled {
 }
 
 .water-flow-indicator {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  box-shadow: 0 8px 28px rgba(13, 36, 38, 0.08);
   color: var(--accent-dark);
-  font-size: 0.8rem;
+  display: grid;
+  gap: 3px 10px;
+  grid-template-columns: 5px auto;
+  line-height: 1;
+  padding: 10px 14px;
+  position: relative;
+  text-align: left;
+}
+
+.water-flow-indicator span {
+  font-size: 0.78rem;
   font-weight: 900;
   text-transform: uppercase;
 }
 
+.water-flow-indicator strong {
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  grid-column: 2;
+  text-transform: uppercase;
+}
+
+.water-flow-indicator::before {
+  background: #ef3d33;
+  content: "";
+  grid-row: 1 / span 2;
+  height: 36px;
+  width: 5px;
+}
+
 .water-flow-indicator::after {
-  content: " ↓";
-  color: #f04438;
-  font-size: 1.2rem;
+  border-left: 8px solid transparent;
+  border-right: 8px solid transparent;
+  border-top: 12px solid #ef3d33;
+  content: "";
+  left: 8px;
+  position: absolute;
+  top: 43px;
 }
 
 .strip-sheet {
   background: #ffffff;
-  border: 4px solid #424c4f;
-  box-shadow: var(--shadow);
+  border: 3px solid #33464a;
+  box-shadow: 0 18px 55px rgba(13, 36, 38, 0.16);
   display: flex;
   flex-direction: column;
-  height: clamp(300px, 58vh, 640px);
+  height: clamp(300px, 54vh, 610px);
   overflow: hidden;
   width: min(100%, 430px);
+}
+
+.strip-design.hero .strip-sheet {
+  height: clamp(360px, 64vh, 700px);
 }
 
 .strip-design.card .strip-sheet {
@@ -281,17 +307,14 @@ button:disabled {
 }
 
 .strip.hydrophilic {
-  background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.35) 0 1px, transparent 2px),
-    var(--hydrophilic);
-  background-size: 8px 8px;
+  background: linear-gradient(180deg, #f4fffc, var(--hydrophilic));
 }
 
 .strip.hydrophobic {
   background:
-    radial-gradient(circle, rgba(255, 255, 255, 0.5) 0 1px, transparent 2px),
-    var(--hydrophobic);
-  background-size: 7px 7px;
+    radial-gradient(circle, rgba(255, 255, 255, 0.72) 0 1.2px, transparent 1.9px),
+    linear-gradient(180deg, #ffc76a, var(--hydrophobic));
+  background-size: 8px 8px, auto;
 }
 
 .strip-legend {
@@ -314,8 +337,10 @@ button:disabled {
 }
 
 .legend-hydrophobic {
-  background: var(--hydrophobic);
-  color: #ffffff;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.65) 0 1px, transparent 1.7px),
+    var(--hydrophobic);
+  background-size: 7px 7px, auto;
 }
 
 .map-screen {
@@ -451,6 +476,23 @@ button:disabled {
   padding: 24px;
 }
 
+.result-stats {
+  background:
+    linear-gradient(180deg, rgba(17, 46, 51, 0.98), rgba(13, 67, 63, 0.96)),
+    var(--ink-panel);
+  border: 0;
+  color: #ffffff;
+}
+
+.result-stats .eyebrow {
+  color: #9ee5d8;
+}
+
+.result-stats .scope-label,
+.result-stats .model-note {
+  color: #c8dedb;
+}
+
 .result-stats h1 {
   font-size: clamp(2rem, 3vw, 3.4rem);
 }
@@ -465,15 +507,15 @@ button:disabled {
 }
 
 .stat {
-  background: var(--surface-soft);
-  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   display: grid;
   gap: 5px;
   padding: 12px;
 }
 
 .stat span {
-  color: var(--muted);
+  color: #9ee5d8;
   font-size: 0.75rem;
   font-weight: 900;
   text-transform: uppercase;
@@ -481,10 +523,12 @@ button:disabled {
 
 .stat strong {
   font-size: 0.98rem;
+  line-height: 1.35;
 }
 
 .ratio-summary {
-  background: #102e31;
+  background: rgba(255, 255, 255, 0.12);
+  border-left: 5px solid var(--hydrophobic);
   color: #ffffff;
   display: grid;
   gap: 8px;
@@ -588,19 +632,6 @@ button:disabled {
 .testing-visual.rings span:nth-child(4) {
   height: 18%;
   width: 18%;
-}
-
-.testing-visual.lines {
-  display: grid;
-  grid-template-columns: repeat(12, 1fr);
-}
-
-.testing-visual.lines span:nth-child(odd) {
-  background: var(--hydrophilic);
-}
-
-.testing-visual.lines span:nth-child(even) {
-  background: var(--hydrophobic);
 }
 
 .testing-visual.asymmetric {
