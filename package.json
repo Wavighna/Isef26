@@ -6,8 +6,8 @@
     "node": ">=20.9.0"
   },
   "scripts": {
-    "dev": "next dev --webpack -H localhost -p 3000",
-    "build": "next build --webpack",
+    "dev": "next dev --turbopack -H localhost -p 3000",
+    "build": "next build --turbopack",
     "start": "next start -H localhost -p 3000",
     "typecheck": "tsc --noEmit",
     "lint": "eslint ."
@@ -23,7 +23,7 @@
     "world-atlas": "^2.0.2"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.3.0",
+    "@tailwindcss/postcss": "^4.1.17",
     "@types/d3-geo": "^3.1.0",
     "@types/node": "latest",
     "@types/react": "latest",
@@ -33,7 +33,7 @@
     "eslint": "latest",
     "eslint-config-next": "latest",
     "postcss": "^8.4.31",
-    "tailwindcss": "^4.3.0",
+    "tailwindcss": "^4.1.17",
     "typescript": "latest"
   }
 }
