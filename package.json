@@ -1,0 +1,32 @@
+{
+  "name": "isef26",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "NEXT_TEST_WASM_DIR=./node_modules/@next/swc-wasm-nodejs next dev --webpack -H 127.0.0.1",
+    "build": "NEXT_TEST_WASM_DIR=./node_modules/@next/swc-wasm-nodejs next build --webpack",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "next": "latest",
+    "react": "latest",
+    "react-dom": "latest",
+    "react-simple-maps": "^3.0.0",
+    "topojson-client": "^3.1.0",
+    "us-atlas": "^3.0.1",
+    "world-atlas": "^2.0.2"
+  },
+  "devDependencies": {
+    "@next/swc-wasm-nodejs": "^16.2.6",
+    "@types/d3-geo": "^3.1.0",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "@types/react-simple-maps": "^3.0.6",
+    "@types/topojson-client": "^3.1.5",
+    "eslint": "latest",
+    "eslint-config-next": "latest",
+    "typescript": "latest"
+  }
+}
