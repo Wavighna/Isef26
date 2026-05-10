@@ -2,10 +2,14 @@
   "name": "isef26",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20.9.0"
+  },
   "scripts": {
-    "dev": "NEXT_TEST_WASM_DIR=./node_modules/@next/swc-wasm-nodejs next dev --webpack -H 127.0.0.1",
-    "build": "NEXT_TEST_WASM_DIR=./node_modules/@next/swc-wasm-nodejs next build --webpack",
-    "start": "next start",
+    "dev": "next dev --turbopack -H localhost -p 3000",
+    "build": "next build --turbopack",
+    "start": "next start -H localhost -p 3000",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint ."
   },
   "dependencies": {
@@ -18,7 +22,7 @@
     "world-atlas": "^2.0.2"
   },
   "devDependencies": {
-    "@next/swc-wasm-nodejs": "^16.2.6",
+    "@tailwindcss/postcss": "^4.1.17",
     "@types/d3-geo": "^3.1.0",
     "@types/node": "latest",
     "@types/react": "latest",
@@ -27,6 +31,8 @@
     "@types/topojson-client": "^3.1.5",
     "eslint": "latest",
     "eslint-config-next": "latest",
+    "postcss": "^8.4.31",
+    "tailwindcss": "^4.1.17",
     "typescript": "latest"
   }
 }

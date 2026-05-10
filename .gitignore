@@ -4,6 +4,7 @@ node_modules
 out
 dist
 build
+*.tsbuildinfo
 .env
 .env.local
 .env.development.local

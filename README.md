@@ -1,9 +1,17 @@
 # Isef26
-# Isef26
 
-A basic Next.js website starter.
+A static Next.js website prototype for the ISEF26 solar overlay concept.
+
+This project uses:
+
+- Next.js App Router
+- Tailwind CSS through PostCSS
+- Turbopack for local development and production builds
+- Hardcoded client-side data only; no API routes or server data fetching
 
 ## Getting Started
+
+Use Node.js 20.9 or newer.
 
 Install dependencies:
 

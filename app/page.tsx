@@ -66,6 +66,20 @@ const tabs: Array<{ id: TabId; label: string }> = [
   { id: "patterns", label: "Under Testing Designs" }
 ];
 
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
+const pagePadding = "p-3 md:p-6";
+const eyebrowClass = "mb-2.5 text-xs font-black uppercase tracking-normal text-[#00856f]";
+const primaryButtonClass =
+  "justify-self-start border-0 bg-[#00856f] px-4 py-3 text-sm font-black text-white whitespace-nowrap transition-colors hover:bg-[#006b5a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00856f] disabled:cursor-default disabled:opacity-45";
+const secondaryButtonClass =
+  "justify-self-start border-0 bg-[#173236] px-4 py-3 text-sm font-black text-white whitespace-nowrap transition-colors hover:bg-[#00856f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9ee5d8]";
+const mutedTextClass = "m-0 leading-[1.55] text-[#5c6d70]";
+const panelHeadingClass = "justify-self-stretch";
+const panelHeadingTitleClass = "mb-2.5 text-[clamp(1.6rem,2.7vw,3rem)] leading-[1.05] tracking-normal";
+
 const categoryProfiles: Record<
   CategoryId,
   Pick<
@@ -588,17 +602,27 @@ export default function Home() {
   }
 
   return (
-    <main className="app-shell">
-      <nav className="topbar" aria-label="Dashboard sections">
-        <div className="brand">
-          <span>Solstice Surface Systems</span>
-          <strong>Retrofit solar cleaning overlays</strong>
+    <main className="min-h-screen">
+      <nav
+        className="sticky top-0 right-0 left-0 z-10 flex items-start justify-between gap-4 border-b border-[#d7e2df] bg-white/90 p-3 md:items-center md:gap-[18px] md:px-[22px] md:py-3.5"
+        aria-label="Dashboard sections"
+      >
+        <div className="grid min-w-0 gap-[3px] md:min-w-60">
+          <span className="text-xs font-black tracking-normal text-[#00856f] uppercase">
+            Solstice Surface Systems
+          </span>
+          <strong className="text-base">Retrofit solar cleaning overlays</strong>
         </div>
-        <div className="tabs">
+        <div className="flex gap-2 overflow-x-auto">
           {tabs.map((tab) => (
             <button
               aria-pressed={activeTab === tab.id}
-              className={activeTab === tab.id ? "tab active" : "tab"}
+              className={cx(
+                "cursor-pointer border-0 px-3.5 py-3 text-sm font-black whitespace-nowrap transition-colors disabled:cursor-default disabled:opacity-45",
+                activeTab === tab.id
+                  ? "bg-[#103f3f] text-white"
+                  : "bg-transparent text-[#5c6d70] hover:bg-[#eef5f2] hover:text-[#132326]"
+              )}
               key={tab.id}
               onClick={() => activateTab(tab.id)}
               type="button"
@@ -635,32 +659,41 @@ export default function Home() {
 
 function HomePanel({ onExplore }: { onExplore: () => void }) {
   return (
-    <section className="hero-screen">
-      <div className="hero-copy">
-        <p className="eyebrow">Company concept</p>
-        <h1>A retrofit acrylic skin that helps solar panels clean themselves with rain.</h1>
-        <p>
+    <section className={cx(pagePadding, "min-h-[calc(100vh-118px)] md:min-h-[calc(100vh-70px)]")}>
+      <div className="grid min-h-[calc(100vh-118px)] content-center gap-5 bg-[#103f3f] p-[clamp(28px,5vw,70px)] text-[#f7fffd] md:min-h-[calc(100vh-118px)]">
+        <p className="m-0 mb-2.5 text-xs font-black tracking-normal text-[#9de3d3] uppercase">
+          Company concept
+        </p>
+        <h1 className="m-0 max-w-[1050px] text-[clamp(2.5rem,5.5vw,5.8rem)] leading-[0.98] tracking-normal max-md:text-[2.2rem]">
+          A retrofit acrylic skin that helps solar panels clean themselves with rain.
+        </h1>
+        <p className="m-0 max-w-[780px] text-[clamp(1rem,1.4vw,1.18rem)] leading-[1.62] text-[#d8ebe7]">
           Solar farms lose performance as dust, minerals, dried water residue,
           and pollution build up on the glass. Chemical coatings can wash into
           the ground below, creating a second environmental cost for a technology
           meant to reduce one.
         </p>
-        <p>
+        <p className="m-0 max-w-[780px] text-[clamp(1rem,1.4vw,1.18rem)] leading-[1.62] text-[#d8ebe7]">
           Our product concept is a thin PMMA overlay with alternating wetting
           zones: smooth hydrophilic areas capture dust into water, while
           laser-textured hydrophobic bands release droplets so the dirty water
           moves down the panel.
         </p>
-        <button onClick={onExplore} type="button">
+        <button className={primaryButtonClass} onClick={onExplore} type="button">
           Explore regional design optimizer
         </button>
       </div>
 
-      <div className="hero-product" aria-label="Product mechanism diagram">
-        <div className="solution-copy">
-          <p className="eyebrow">Alternating solution</p>
-          <h2>Capture the dirt first. Release the water next.</h2>
-          <p>
+      <div
+        className="relative grid min-h-[calc(100vh-70px)] content-start justify-items-center gap-6 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(237,245,242,0.98)),#eef5f2] px-6 py-[clamp(34px,5vw,72px)] max-md:p-[18px]"
+        aria-label="Product mechanism diagram"
+      >
+        <div className="max-w-[860px] text-center">
+          <p className={eyebrowClass}>Alternating solution</p>
+          <h2 className="m-0 mb-3.5 text-[clamp(2rem,4vw,4.7rem)] leading-none tracking-normal">
+            Capture the dirt first. Release the water next.
+          </h2>
+          <p className="m-0 text-[1.04rem] leading-[1.6] text-[#5c6d70]">
             The overlay is patterned in the direction of droplet travel. Smooth
             PMMA hydrophilic bands wet the dust, while dotted hydrophobic
             micro-textured bands make the dirty water release and continue down
@@ -673,9 +706,11 @@ function HomePanel({ onExplore }: { onExplore: () => void }) {
           stripCount={12}
           variant="large"
         />
-        <div className="product-caption">
+        <div className="grid max-w-[560px] gap-1.5 text-center">
           <strong>Final product direction</strong>
-          <span>Hydrophilic capture bands alternate with hydrophobic release bands from top to bottom.</span>
+          <span className="leading-[1.55] text-[#5c6d70]">
+            Hydrophilic capture bands alternate with hydrophobic release bands from top to bottom.
+          </span>
         </div>
       </div>
     </section>
@@ -705,16 +740,25 @@ function OptimizerPanel({
 }) {
   if (selectedRegion && selectedProfile) {
     return (
-      <section className="optimizer-result-screen">
-        <div className="result-stats">
-          <button className="secondary-button" onClick={onBack} type="button">
+      <section
+        className={cx(
+          pagePadding,
+          "grid min-h-[calc(100vh-118px)] grid-cols-1 gap-[22px] lg:min-h-[calc(100vh-70px)] lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]"
+        )}
+      >
+        <div className="grid content-start gap-[18px] bg-[linear-gradient(180deg,rgba(17,46,51,0.98),rgba(13,67,63,0.96)),#112e33] p-6 text-white">
+          <button className={secondaryButtonClass} onClick={onBack} type="button">
             Back to map
           </button>
-          <p className="eyebrow">Optimized regional overlay</p>
-          <h1>{selectedRegion.name}</h1>
-          <p className="scope-label">{selectedRegion.scope}</p>
+          <p className="m-0 mb-2.5 text-xs font-black tracking-normal text-[#9ee5d8] uppercase">
+            Optimized regional overlay
+          </p>
+          <h1 className="m-0 text-[clamp(2rem,3vw,3.4rem)] leading-[0.98] tracking-normal">
+            {selectedRegion.name}
+          </h1>
+          <p className="m-0 leading-[1.55] text-[#c8dedb]">{selectedRegion.scope}</p>
 
-          <div className="stat-grid">
+          <div className="grid gap-2.5">
             <Stat label="PVGIS-style fixed tilt" value={`${selectedRegion.tilt} deg`} />
             <Stat label="Tilt basis" value={selectedRegion.tiltBasis} />
             <Stat label="Environmental type" value={selectedProfile.environment} />
@@ -724,19 +768,21 @@ function OptimizerPanel({
             <Stat label="Soiling risk" value={selectedRegion.dust} />
           </div>
 
-          <div className="ratio-summary">
+          <div className="grid gap-2 border-l-[5px] border-[#f6b44b] bg-white/10 p-4 text-white">
             <strong>{selectedRegion.hydrophilic}% hydrophilic</strong>
             <strong>{selectedRegion.hydrophobic}% hydrophobic</strong>
-            <span>{selectedRegion.stripCount} alternating bands from top to bottom</span>
+            <span className="text-[#cfe6e2]">
+              {selectedRegion.stripCount} alternating bands from top to bottom
+            </span>
           </div>
-          <p className="model-note">{selectedRegion.note}</p>
+          <p className="m-0 leading-[1.55] text-[#c8dedb]">{selectedRegion.note}</p>
         </div>
 
-        <div className="optimized-design-panel">
-          <div className="panel-heading">
-            <p className="eyebrow">Main implemented pattern</p>
-            <h2>Vertical-flow alternating stripe overlay</h2>
-            <p>
+        <div className="grid content-start justify-items-center gap-[18px] border border-[#d7e2df] bg-white p-6">
+          <div className={panelHeadingClass}>
+            <p className={eyebrowClass}>Main implemented pattern</p>
+            <h2 className={panelHeadingTitleClass}>Vertical-flow alternating stripe overlay</h2>
+            <p className={mutedTextClass}>
               The optimization changes the frequency and balance of hydrophobic
               release bands. Water travels downward through each hydrophilic and
               hydrophobic transition.
@@ -754,17 +800,24 @@ function OptimizerPanel({
   }
 
   return (
-    <section className="map-screen">
-      <div className="map-header">
+    <section
+      className={cx(
+        pagePadding,
+        "grid min-h-[calc(100vh-118px)] grid-rows-[auto_1fr] gap-[18px] md:min-h-[calc(100vh-70px)]"
+      )}
+    >
+      <div className="flex flex-col items-start justify-between gap-[18px] lg:flex-row lg:items-end">
         <div>
-          <p className="eyebrow">Region optimizer</p>
-          <h1>{mapMode === "world" ? "Select a country, sea, or ocean" : "Select a U.S. state"}</h1>
-          <p>
+          <p className={eyebrowClass}>Region optimizer</p>
+          <h1 className="m-0 text-[clamp(2rem,4vw,4.6rem)] leading-[0.98] tracking-normal max-md:text-[2.2rem]">
+            {mapMode === "world" ? "Select a country, sea, or ocean" : "Select a U.S. state"}
+          </h1>
+          <p className={cx(mutedTextClass, "max-w-[780px]")}>
             The map estimates a business-prototype overlay pattern from climate,
             moisture, dust risk, and PVGIS-style annual tilt guidance.
           </p>
         </div>
-        <button disabled={mapMode === "world"} onClick={onWorld} type="button">
+        <button className={primaryButtonClass} disabled={mapMode === "world"} onClick={onWorld} type="button">
           World map
         </button>
       </div>
@@ -782,22 +835,29 @@ function OptimizerPanel({
 
 function PatternsPanel() {
   return (
-    <section className="patterns-screen">
-      <div className="panel-heading wide">
-        <p className="eyebrow">Other versions under testing</p>
-        <h1>Future alternating-design variants</h1>
-        <p>
+    <section
+      className={cx(
+        pagePadding,
+        "grid min-h-[calc(100vh-118px)] grid-cols-1 gap-[18px] border border-[#d7e2df] bg-white md:min-h-[calc(100vh-70px)] lg:grid-cols-2"
+      )}
+    >
+      <div className="col-span-full justify-self-stretch">
+        <p className={eyebrowClass}>Other versions under testing</p>
+        <h1 className="m-0 text-[clamp(2rem,4vw,4.8rem)] leading-[0.98] tracking-normal max-md:text-[2.2rem]">
+          Future alternating-design variants
+        </h1>
+        <p className={mutedTextClass}>
           The product path is still the top-to-bottom alternating stripe
           overlay. These concepts are under testing to improve directional dust
           transport, reduce droplet pinning, and minimize optical loss.
         </p>
       </div>
 
-      <article className="testing-card primary">
+      <article className="col-span-full grid grid-cols-1 gap-[18px] border border-[#d7e2df] bg-white p-[18px] lg:grid-cols-[minmax(220px,0.9fr)_minmax(0,1fr)]">
         <VerticalStripDesign hydrophilic={66} hydrophobic={34} stripCount={12} variant="card" />
         <div>
-          <h2>Baseline alternating stripe design</h2>
-          <p>
+          <h2 className={panelHeadingTitleClass}>Baseline alternating stripe design</h2>
+          <p className={mutedTextClass}>
             The main design places hydrophilic and hydrophobic regions as
             horizontal bands so droplets cross transitions while flowing
             downward.
@@ -845,11 +905,15 @@ function MapView({
   const scope = mapMode === "world" ? "Country" : "U.S. State";
 
   return (
-    <div className="map-stage">
+    <div className="grid min-h-0 gap-2.5">
       {mapMode === "world" && (
-        <div className="marine-zone-grid" aria-label="Connected ocean and sea regions">
+        <div
+          className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7"
+          aria-label="Connected ocean and sea regions"
+        >
           {marineZones.map((zone) => (
             <button
+              className="min-h-[38px] cursor-pointer border-0 bg-[#173236] p-2 text-xs font-black text-white transition-colors hover:bg-[#bc6a1f] focus-visible:bg-[#bc6a1f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00856f]"
               key={zone.id}
               onClick={() => onMarineSelect(zone)}
               onMouseEnter={() => onHover(zone.name)}
@@ -861,8 +925,9 @@ function MapView({
           ))}
         </div>
       )}
-      <div className="map-frame expanded">
+      <div className="min-h-[64vh] overflow-hidden border border-[#d7e2df] bg-[#f8fbfa]">
         <ComposableMap
+          className="block h-auto w-full"
           height={560}
           projection={projection}
           projectionConfig={mapMode === "world" ? { scale: 170 } : { scale: 1080 }}
@@ -877,7 +942,7 @@ function MapView({
                 return (
                   <Geography
                     aria-label={name}
-                    className="geography"
+                    className="fill-[#c8d7d3] stroke-white stroke-[0.65] outline-none transition-colors hover:fill-[#66b6aa] focus:fill-[#66b6aa]"
                     geography={geo}
                     key={geo.rsmKey}
                     onClick={() => onSelect(geo, scope)}
@@ -895,15 +960,22 @@ function MapView({
               <Marker coordinates={zone.coordinates} key={zone.id}>
                 <g
                   aria-label={zone.name}
-                  className="marine-marker"
+                  className="group cursor-pointer outline-none"
                   onClick={() => onMarineSelect(zone)}
                   onMouseEnter={() => onHover(zone.name)}
                   onMouseLeave={() => onHover("Hover a country, state, sea, or ocean")}
                   role="button"
                   tabIndex={0}
                 >
-                  <circle r={7} />
-                  <text textAnchor="middle" y={-12}>
+                  <circle
+                    className="fill-[#bc6a1f] stroke-white stroke-2 group-hover:fill-[#f0c86b] group-focus:fill-[#f0c86b]"
+                    r={7}
+                  />
+                  <text
+                    className="pointer-events-none fill-[#173236] text-[10px] font-black stroke-white/90 stroke-[3px] [paint-order:stroke]"
+                    textAnchor="middle"
+                    y={-12}
+                  >
                     {zone.name}
                   </text>
                 </g>
@@ -912,7 +984,7 @@ function MapView({
         </ComposableMap>
       </div>
 
-      <div className="map-status">
+      <div className="flex flex-col justify-between gap-4 text-sm text-[#5c6d70] md:flex-row">
         <span>{hoveredRegion}</span>
         <span>Click land or a marked marine zone to generate the overlay design.</span>
       </div>
@@ -933,38 +1005,87 @@ function VerticalStripDesign({
 }) {
   const strips = Array.from({ length: stripCount }, (_, index) => {
     const isHydrophobic = index % 2 === 1;
-    const hydrophobicWeight = Math.max(0.7, hydrophobic / 45);
-    const hydrophilicWeight = Math.max(0.9, hydrophilic / 55);
 
     return {
       id: index,
-      isHydrophobic,
-      flex: isHydrophobic ? hydrophobicWeight : hydrophilicWeight
+      isHydrophobic
     };
   });
+  const hydrophilicFlexClasses: Record<number, string> = {
+    42: "flex-[0.9]",
+    52: "flex-[0.95]",
+    60: "flex-[1.09]",
+    62: "flex-[1.13]",
+    66: "flex-[1.2]",
+    76: "flex-[1.38]",
+    82: "flex-[1.49]",
+    86: "flex-[1.56]",
+    88: "flex-[1.6]"
+  };
+  const hydrophobicFlexClasses: Record<number, string> = {
+    12: "flex-[0.7]",
+    14: "flex-[0.7]",
+    18: "flex-[0.7]",
+    24: "flex-[0.7]",
+    34: "flex-[0.76]",
+    38: "flex-[0.84]",
+    40: "flex-[0.89]",
+    48: "flex-[1.07]",
+    58: "flex-[1.29]"
+  };
+  const rootClass = cx(
+    "grid justify-items-center gap-3",
+    variant === "large" && "w-full max-w-[560px]",
+    variant === "hero" && "w-full max-w-[720px]",
+    variant === "card" && "w-full max-w-[360px]"
+  );
+  const sheetClass = cx(
+    "flex w-full max-w-[430px] flex-col overflow-hidden border-[3px] border-[#33464a] bg-white shadow-[0_18px_55px_rgba(13,36,38,0.16)]",
+    variant === "hero" && "h-[clamp(360px,64vh,700px)]",
+    variant === "card" && "h-[270px]",
+    variant === "large" && "h-[clamp(300px,54vh,610px)] max-md:h-[390px]"
+  );
 
   return (
     <div
       aria-label={`${hydrophilic}% hydrophilic and ${hydrophobic}% hydrophobic vertical-flow alternating stripe design`}
-      className={`strip-design ${variant}`}
+      className={rootClass}
       role="img"
     >
-      <div className="water-flow-indicator" aria-hidden="true">
-        <span>Water flow</span>
-        <strong>down panel</strong>
+      <div
+        className="relative grid grid-cols-[5px_auto] items-center gap-x-2.5 gap-y-[3px] border border-[#d7e2df] bg-white px-3.5 py-2.5 text-left leading-none text-[#103f3f] shadow-[0_8px_28px_rgba(13,36,38,0.08)]"
+        aria-hidden="true"
+      >
+        <span className="row-span-2 h-9 w-[5px] bg-[#ef3d33]" />
+        <span className="text-xs font-black uppercase">Water flow</span>
+        <strong className="col-start-2 text-[0.72rem] font-extrabold text-[#5c6d70] uppercase">
+          down panel
+        </strong>
+        <span className="absolute top-[43px] left-2 h-0 w-0 border-x-8 border-t-[12px] border-x-transparent border-t-[#ef3d33]" />
       </div>
-      <div className="strip-sheet">
+      <div className={sheetClass}>
         {strips.map((strip) => (
           <span
-            className={strip.isHydrophobic ? "strip hydrophobic" : "strip hydrophilic"}
+            className={cx(
+              "min-h-2",
+              strip.isHydrophobic
+                ? "bg-[radial-gradient(circle,rgba(255,255,255,0.72)_0_1.2px,transparent_1.9px),linear-gradient(180deg,#ffc76a,#f6b44b)] [background-size:8px_8px,auto]"
+                : "bg-[linear-gradient(180deg,#f4fffc,#d8f5f1)]",
+              strip.isHydrophobic
+                ? hydrophobicFlexClasses[hydrophobic] ?? "flex-1"
+                : hydrophilicFlexClasses[hydrophilic] ?? "flex-1"
+            )}
             key={strip.id}
-            style={{ flex: strip.flex }}
           />
         ))}
       </div>
-      <div className="strip-legend">
-        <span className="legend-hydrophilic">Hydrophilic capture</span>
-        <span className="legend-hydrophobic">Hydrophobic release</span>
+      <div className="flex flex-wrap justify-center gap-2.5">
+        <span className="border border-[#d7e2df] bg-[#d8f5f1] px-2.5 py-2 text-xs font-black text-[#132326]">
+          Hydrophilic capture
+        </span>
+        <span className="border border-[#d7e2df] bg-[radial-gradient(circle,rgba(255,255,255,0.65)_0_1px,transparent_1.7px),#f6b44b] px-2.5 py-2 text-xs font-black text-[#132326] [background-size:7px_7px,auto]">
+          Hydrophobic release
+        </span>
       </div>
     </div>
   );
@@ -979,22 +1100,47 @@ function TestingCard({
   kind: "gradient" | "rings" | "asymmetric";
   title: string;
 }) {
+  const ringClasses = [
+    "h-[82%] w-[82%]",
+    "h-[60%] w-[60%]",
+    "h-[38%] w-[38%]",
+    "h-[18%] w-[18%]"
+  ];
+
   return (
-    <article className="testing-card">
-      <div className={`testing-visual ${kind}`} aria-hidden="true">
+    <article className="grid grid-cols-1 gap-[18px] border border-[#d7e2df] bg-white p-[18px] max-md:p-3.5 lg:grid-cols-[minmax(220px,0.9fr)_minmax(0,1fr)]">
+      <div
+        className={cx(
+          "relative aspect-[1.45/1] overflow-hidden border-[3px] border-[#4d5658]",
+          kind === "gradient" &&
+            "bg-[linear-gradient(180deg,#ffffff_0_28%,#d8f5f1_46%,#f6b44b_100%)]",
+          kind === "rings" &&
+            "grid justify-items-center bg-[radial-gradient(circle,rgba(255,255,255,0.28)_0_1px,transparent_2px),#dad3c7] [background-size:8px_8px]",
+          kind === "asymmetric" && "flex flex-col"
+        )}
+        aria-hidden="true"
+      >
         {kind === "rings" && (
           <>
-            <span />
-            <span />
-            <span />
-            <span />
+            {ringClasses.map((className) => (
+              <span
+                className={cx("absolute border-[10px] border-[rgba(35,44,45,0.7)]", className)}
+                key={className}
+              />
+            ))}
           </>
         )}
-        {kind === "asymmetric" && Array.from({ length: 9 }).map((_, index) => <span key={index} />)}
+        {kind === "asymmetric" &&
+          Array.from({ length: 9 }).map((_, index) => (
+            <span
+              className={index % 2 === 0 ? "flex-[1.7] bg-[#d8f5f1]" : "flex-[0.7] bg-[#f6b44b]"}
+              key={index}
+            />
+          ))}
       </div>
       <div>
-        <h2>{title}</h2>
-        <p>{description}</p>
+        <h2 className={panelHeadingTitleClass}>{title}</h2>
+        <p className={mutedTextClass}>{description}</p>
       </div>
     </article>
   );
@@ -1002,9 +1148,9 @@ function TestingCard({
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="stat">
-      <span>{label}</span>
-      <strong>{value}</strong>
+    <div className="grid gap-[5px] border border-white/15 bg-white/10 p-3">
+      <span className="text-xs font-black text-[#9ee5d8] uppercase">{label}</span>
+      <strong className="text-base leading-[1.35]">{value}</strong>
     </div>
   );
 }
