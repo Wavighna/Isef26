@@ -408,6 +408,27 @@ button:disabled {
   justify-content: space-between;
 }
 
+.marine-zone-grid {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.marine-zone-grid button {
+  background: #173236;
+  border: 0;
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 900;
+  min-height: 38px;
+  padding: 8px;
+}
+
+.marine-zone-grid button:hover,
+.marine-zone-grid button:focus {
+  background: var(--hydrophobic-strong);
+}
+
 .optimizer-result-screen {
   display: grid;
   gap: 22px;
@@ -649,6 +670,10 @@ button:disabled {
 
   .map-status {
     flex-direction: column;
+  }
+
+  .marine-zone-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .testing-card {

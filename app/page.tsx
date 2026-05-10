@@ -261,6 +261,106 @@ const marineZones: MarineZone[] = [
     temperature: "Very warm water",
     waterContent: "High salinity, low rainfall",
     note: "Hot saline conditions need more frequent release bands for salt and dust."
+  },
+  {
+    id: "gulf-of-mexico",
+    name: "Gulf of Mexico",
+    coordinates: [-90, 25],
+    category: "marine-humid",
+    latitude: 25,
+    temperature: "Warm water",
+    waterContent: "High humidity, storms, and salt spray",
+    note: "Warm humid coastal exposure supports hydrophilic-dominant overlays."
+  },
+  {
+    id: "south-china-sea",
+    name: "South China Sea",
+    coordinates: [114, 13],
+    category: "marine-humid",
+    latitude: 13,
+    temperature: "Warm tropical water",
+    waterContent: "High monsoon moisture",
+    note: "Frequent wetting reduces the need for dense hydrophobic release bands."
+  },
+  {
+    id: "bay-of-bengal",
+    name: "Bay of Bengal",
+    coordinates: [88, 15],
+    category: "marine-humid",
+    latitude: 15,
+    temperature: "Warm water",
+    waterContent: "Very high seasonal rainfall",
+    note: "Monsoon rain and humidity favor hydrophilic capture with moderate release bands."
+  },
+  {
+    id: "persian-gulf",
+    name: "Persian Gulf",
+    coordinates: [51, 27],
+    category: "marine-arid",
+    latitude: 27,
+    temperature: "Very warm shallow water",
+    waterContent: "High salinity, high evaporation",
+    note: "Salt and regional dust call for a stronger hydrophobic release frequency."
+  },
+  {
+    id: "black-sea",
+    name: "Black Sea",
+    coordinates: [34, 43],
+    category: "temperate",
+    latitude: 43,
+    temperature: "Cool to mild water",
+    waterContent: "Moderate marine humidity",
+    note: "Seasonal rainfall and moderate dust suggest a balanced strip layout."
+  },
+  {
+    id: "baltic-sea",
+    name: "Baltic Sea",
+    coordinates: [20, 58],
+    category: "polar-marine",
+    latitude: 58,
+    temperature: "Cold brackish water",
+    waterContent: "High moisture, low evaporation",
+    note: "Cold wet conditions favor sparse hydrophobic release bands."
+  },
+  {
+    id: "north-atlantic",
+    name: "North Atlantic",
+    coordinates: [-42, 47],
+    category: "marine-humid",
+    latitude: 47,
+    temperature: "Cool water",
+    waterContent: "High storm and spray exposure",
+    note: "Frequent wetting supports hydrophilic-heavy patterning."
+  },
+  {
+    id: "bering-sea",
+    name: "Bering Sea",
+    coordinates: [-175, 58],
+    category: "polar-marine",
+    latitude: 58,
+    temperature: "Cold water",
+    waterContent: "High spray and ice exposure",
+    note: "Cold marine exposure favors mostly hydrophilic coverage."
+  },
+  {
+    id: "sea-of-japan",
+    name: "Sea of Japan",
+    coordinates: [135, 40],
+    category: "temperate",
+    latitude: 40,
+    temperature: "Seasonal cool-to-warm water",
+    waterContent: "Moderate to high moisture",
+    note: "Seasonal conditions suggest medium strip frequency."
+  },
+  {
+    id: "coral-sea",
+    name: "Coral Sea",
+    coordinates: [155, -18],
+    category: "marine-humid",
+    latitude: -18,
+    temperature: "Warm tropical water",
+    waterContent: "High humidity and rainfall",
+    note: "Warm wet exposure favors hydrophilic-heavy patterning."
   }
 ];
 
@@ -704,6 +804,21 @@ function MapView({
 
   return (
     <div className="map-stage">
+      {mapMode === "world" && (
+        <div className="marine-zone-grid" aria-label="Connected ocean and sea regions">
+          {marineZones.map((zone) => (
+            <button
+              key={zone.id}
+              onClick={() => onMarineSelect(zone)}
+              onMouseEnter={() => onHover(zone.name)}
+              onMouseLeave={() => onHover("Hover a country, state, sea, or ocean")}
+              type="button"
+            >
+              {zone.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="map-frame expanded">
         <ComposableMap
           height={560}
