@@ -1,20 +1,30 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { geoCentroid } from "d3-geo";
-import type { Feature, Geometry } from "geojson";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { PatternLabContent, ProductContent } from "./_components/project-pages";
 import {
-  ComposableMap,
-  Geographies,
-  Geography,
-  Graticule,
-  Marker
-} from "react-simple-maps";
-import worldMap from "world-atlas/countries-110m.json";
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState
+} from "react";
+import {
+  geoCentroid,
+  geoContains,
+  geoEquirectangular,
+  geoPath
+} from "d3-geo";
+import type { Feature, FeatureCollection, Geometry } from "geojson";
+import * as THREE from "three";
+import { feature } from "topojson-client";
 import usMap from "us-atlas/states-10m.json";
+import worldMap from "world-atlas/countries-10m.json";
 
-type TabId = "home" | "optimizer" | "patterns";
+type PageId = "optimizer" | "product" | "patterns";
 type RegionScope = "Country" | "U.S. State" | "Ocean / Sea";
+type GlobeMode = "world" | "us";
 type CategoryId =
   | "rainy-steep"
   | "humid-moderate"
@@ -36,6 +46,7 @@ type RegionRecommendation = {
   tilt: number;
   tiltBasis: string;
   latitude: number;
+  longitude: number;
   hydrophilic: number;
   hydrophobic: number;
   stripCount: number;
@@ -44,9 +55,8 @@ type RegionRecommendation = {
   note: string;
 };
 
-type MapGeo = Feature<Geometry, { name?: string }> & {
+type RegionFeature = Feature<Geometry, { name?: string }> & {
   id?: number | string;
-  rsmKey: string;
 };
 
 type MarineZone = {
@@ -60,25 +70,22 @@ type MarineZone = {
   note: string;
 };
 
-const tabs: Array<{ id: TabId; label: string }> = [
-  { id: "home", label: "Home" },
-  { id: "optimizer", label: "Region Optimizer" },
-  { id: "patterns", label: "Under Testing Designs" }
+type HoveredRegion = {
+  name: string;
+  coordinates?: [number, number];
+};
+
+type GlobeFocus = {
+  latitude: number;
+  longitude: number;
+  snap?: boolean;
+};
+
+const pages: Array<{ id: PageId; label: string; href: string }> = [
+  { id: "product", label: "Product", href: "/product" },
+  { id: "patterns", label: "Pattern Lab", href: "/pattern-lab" },
+  { id: "optimizer", label: "3D Optimizer", href: "/optimizer" }
 ];
-
-function cx(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(" ");
-}
-
-const pagePadding = "p-3 md:p-6";
-const eyebrowClass = "mb-2.5 text-xs font-black uppercase tracking-normal text-[#00856f]";
-const primaryButtonClass =
-  "justify-self-start border-0 bg-[#00856f] px-4 py-3 text-sm font-black text-white whitespace-nowrap transition-colors hover:bg-[#006b5a] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00856f] disabled:cursor-default disabled:opacity-45";
-const secondaryButtonClass =
-  "justify-self-start border-0 bg-[#173236] px-4 py-3 text-sm font-black text-white whitespace-nowrap transition-colors hover:bg-[#00856f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#9ee5d8]";
-const mutedTextClass = "m-0 leading-[1.55] text-[#5c6d70]";
-const panelHeadingClass = "justify-self-stretch";
-const panelHeadingTitleClass = "mb-2.5 text-[clamp(1.6rem,2.7vw,3rem)] leading-[1.05] tracking-normal";
 
 const categoryProfiles: Record<
   CategoryId,
@@ -336,46 +343,6 @@ const marineZones: MarineZone[] = [
     temperature: "Cold brackish water",
     waterContent: "High moisture, low evaporation",
     note: "Cold wet conditions favor sparse hydrophobic release bands."
-  },
-  {
-    id: "north-atlantic",
-    name: "North Atlantic",
-    coordinates: [-42, 47],
-    category: "marine-humid",
-    latitude: 47,
-    temperature: "Cool water",
-    waterContent: "High storm and spray exposure",
-    note: "Frequent wetting supports hydrophilic-heavy patterning."
-  },
-  {
-    id: "bering-sea",
-    name: "Bering Sea",
-    coordinates: [-175, 58],
-    category: "polar-marine",
-    latitude: 58,
-    temperature: "Cold water",
-    waterContent: "High spray and ice exposure",
-    note: "Cold marine exposure favors mostly hydrophilic coverage."
-  },
-  {
-    id: "sea-of-japan",
-    name: "Sea of Japan",
-    coordinates: [135, 40],
-    category: "temperate",
-    latitude: 40,
-    temperature: "Seasonal cool-to-warm water",
-    waterContent: "Moderate to high moisture",
-    note: "Seasonal conditions suggest medium strip frequency."
-  },
-  {
-    id: "coral-sea",
-    name: "Coral Sea",
-    coordinates: [155, -18],
-    category: "marine-humid",
-    latitude: -18,
-    temperature: "Warm tropical water",
-    waterContent: "High humidity and rainfall",
-    note: "Warm wet exposure favors hydrophilic-heavy patterning."
   }
 ];
 
@@ -435,8 +402,68 @@ const humidStates = new Set([
   "South Carolina"
 ]);
 
+const legendColorClassByCategory: Record<CategoryId, string> = {
+  "rainy-steep": "bg-[#53d9c6]",
+  "humid-moderate": "bg-[#73d27f]",
+  temperate: "bg-[#b7cc73]",
+  "arid-dusty": "bg-[#d8a34f]",
+  "desert-flat": "bg-[#c77338]",
+  "marine-humid": "bg-[#35a8d8]",
+  "marine-arid": "bg-[#ce9340]",
+  "polar-marine": "bg-[#9ad9ff]"
+};
+
+const labelByCategory: Record<CategoryId, string> = {
+  "rainy-steep": "Rainy / steep",
+  "humid-moderate": "Humid / moderate",
+  temperate: "Temperate",
+  "arid-dusty": "Arid / dusty",
+  "desert-flat": "Desert / flat",
+  "marine-humid": "Humid marine",
+  "marine-arid": "Arid marine",
+  "polar-marine": "Cold marine"
+};
+
+const worldFeatures = atlasFeatures(worldMap, "countries");
+const stateFeatures = atlasFeatures(usMap, "states");
+const earthTextureUrl =
+  "/textures/earth-8192.jpg";
+const earthBumpTextureUrl =
+  "https://unpkg.com/three-globe/example/img/earth-topology.png";
+const earthWaterTextureUrl =
+  "https://unpkg.com/three-globe/example/img/earth-water.png";
+const cloudsTextureUrl =
+  "https://unpkg.com/globe.gl/example/clouds/clouds.png";
+
+function atlasFeatures(data: unknown, key: string): RegionFeature[] {
+  const topology = data as { objects: Record<string, unknown> };
+  const collection = feature(
+    topology as never,
+    topology.objects[key] as never
+  ) as unknown as FeatureCollection<Geometry, { name?: string }>;
+
+  return collection.features as RegionFeature[];
+}
+
+function cx(...classes: Array<string | false | null | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function nearestEquivalentAngle(angle: number, reference: number) {
+  const fullTurn = Math.PI * 2;
+  return angle + Math.round((reference - angle) / fullTurn) * fullTurn;
+}
+
+function coordinatesFromFeature(geo: RegionFeature): [number, number] {
+  const centroid = geoCentroid(geo);
+  const longitude = Number.isFinite(centroid[0]) ? centroid[0] : 0;
+  const latitude = Number.isFinite(centroid[1]) ? centroid[1] : 0;
+
+  return [longitude, latitude];
 }
 
 function estimatedAnnualTilt(latitude: number, category: CategoryId) {
@@ -495,10 +522,20 @@ function classifyState(name: string): CategoryId {
   return "temperate";
 }
 
+function categoryForFeature(geo: RegionFeature, scope: "Country" | "U.S. State") {
+  const name = geo.properties?.name ?? "Selected region";
+  const [, latitude] = coordinatesFromFeature(geo);
+
+  return scope === "U.S. State"
+    ? classifyState(name)
+    : classifyCountry(name, latitude);
+}
+
 function buildRecommendation({
   category,
   id,
   latitude,
+  longitude,
   name,
   note,
   scope,
@@ -508,6 +545,7 @@ function buildRecommendation({
   category: CategoryId;
   id: string;
   latitude: number;
+  longitude: number;
   name: string;
   note: string;
   scope: RegionScope;
@@ -522,6 +560,7 @@ function buildRecommendation({
     scope,
     category,
     latitude,
+    longitude,
     tilt: estimatedAnnualTilt(latitude, category),
     tiltBasis: tiltBasis(latitude, category),
     note,
@@ -532,23 +571,23 @@ function buildRecommendation({
 }
 
 function recommendationFromGeo(
-  geo: MapGeo,
+  geo: RegionFeature,
   scope: "Country" | "U.S. State"
 ): RegionRecommendation {
   const name = geo.properties?.name ?? "Selected region";
-  const [, latitude] = geoCentroid(geo);
-  const category =
-    scope === "U.S. State" ? classifyState(name) : classifyCountry(name, latitude);
+  const [longitude, latitude] = coordinatesFromFeature(geo);
+  const category = categoryForFeature(geo, scope);
 
   return buildRecommendation({
     category,
     id: `${scope}-${geo.id ?? name}`,
     latitude,
+    longitude,
     name,
     note:
       scope === "U.S. State"
-        ? "State-level business prototype recommendation for retrofit overlay patterning."
-        : "Country-level business prototype recommendation for retrofit overlay patterning.",
+        ? "State-level prototype recommendation for retrofit overlay patterning."
+        : "Country-level prototype recommendation for retrofit overlay patterning.",
     scope
   });
 }
@@ -558,6 +597,7 @@ function recommendationFromMarine(zone: MarineZone): RegionRecommendation {
     category: zone.category,
     id: zone.id,
     latitude: zone.latitude,
+    longitude: zone.coordinates[0],
     name: zone.name,
     note: zone.note,
     scope: "Ocean / Sea",
@@ -566,428 +606,885 @@ function recommendationFromMarine(zone: MarineZone): RegionRecommendation {
   });
 }
 
+function lonLatToVector3(longitude: number, latitude: number, radius: number) {
+  const phi = THREE.MathUtils.degToRad(latitude);
+  const theta = THREE.MathUtils.degToRad(longitude);
+  const cosPhi = Math.cos(phi);
+
+  return new THREE.Vector3(
+    radius * cosPhi * Math.cos(theta),
+    radius * Math.sin(phi),
+    -radius * cosPhi * Math.sin(theta)
+  );
+}
+
+function findFeatureAtPoint(features: RegionFeature[], longitude: number, latitude: number) {
+  return features.find((geo) => geoContains(geo, [longitude, latitude]));
+}
+
+function createBorderTexture({
+  mode,
+  selectedId
+}: {
+  mode: GlobeMode;
+  selectedId?: string;
+}) {
+  const width = 8192;
+  const height = 4096;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) return canvas;
+
+  const projection = geoEquirectangular()
+    .scale(width / (2 * Math.PI))
+    .translate([width / 2, height / 2])
+    .precision(0.1);
+  const path = geoPath(projection, context);
+
+  worldFeatures.forEach((geo) => {
+    const name = geo.properties?.name ?? "";
+    const isSelected = selectedId === `Country-${geo.id ?? name}`;
+
+    context.beginPath();
+    path(geo);
+    if (isSelected) {
+      context.fillStyle = "rgba(247, 215, 121, 0.38)";
+      context.fill();
+    }
+    context.strokeStyle = "rgba(0, 0, 0, 0.9)";
+    context.lineWidth = isSelected ? 7 : 3.2;
+    context.stroke();
+  });
+
+  if (mode === "us") {
+    stateFeatures.forEach((geo) => {
+      const name = geo.properties?.name ?? "";
+      const isSelected = selectedId === `U.S. State-${geo.id ?? name}`;
+
+      context.beginPath();
+      path(geo);
+      if (isSelected) {
+        context.fillStyle = "rgba(247, 215, 121, 0.42)";
+        context.fill();
+      }
+      context.strokeStyle = "rgba(0, 0, 0, 0.94)";
+      context.lineWidth = isSelected ? 7.4 : 3.6;
+      context.stroke();
+    });
+  }
+
+  return canvas;
+}
+
 export default function Home() {
-  const [activeTab, setActiveTab] = useState<TabId>("home");
-  const [mapMode, setMapMode] = useState<"world" | "us">("world");
-  const [hoveredRegion, setHoveredRegion] = useState("Hover a country, state, sea, or ocean");
-  const [selectedRegion, setSelectedRegion] = useState<RegionRecommendation | null>(null);
+  const pathname = usePathname();
+  const activePage = pageFromPathname(pathname);
+  const [mapMode, setMapMode] = useState<GlobeMode>("world");
+  const [hoveredRegion, setHoveredRegion] = useState<HoveredRegion>({
+    name: "Rotate the globe or select a region"
+  });
+  const [selectedRegion, setSelectedRegion] = useState<RegionRecommendation | null>(
+    null
+  );
 
   const selectedProfile = useMemo(
     () => (selectedRegion ? categoryProfiles[selectedRegion.category] : null),
     [selectedRegion]
   );
 
-  function activateTab(tab: TabId) {
-    setActiveTab(tab);
-    if (tab === "optimizer") {
-      setSelectedRegion(null);
-    }
-  }
+  const selectGeo = useCallback(
+    (geo: RegionFeature, scope: "Country" | "U.S. State") => {
+      setSelectedRegion(recommendationFromGeo(geo, scope));
+    },
+    []
+  );
 
-  function selectGeo(geo: MapGeo, scope: "Country" | "U.S. State") {
-    const recommendation = recommendationFromGeo(geo, scope);
-
-    if (scope === "Country" && recommendation.name.includes("United States")) {
-      setMapMode("us");
-      setHoveredRegion("United States state map");
-      setSelectedRegion(null);
-      return;
-    }
-
-    setSelectedRegion(recommendation);
-  }
-
-  function selectMarine(zone: MarineZone) {
+  const selectMarine = useCallback((zone: MarineZone) => {
     setSelectedRegion(recommendationFromMarine(zone));
-  }
+  }, []);
+
+  const switchMode = useCallback((mode: GlobeMode) => {
+    setMapMode(mode);
+    setSelectedRegion(null);
+    setHoveredRegion({
+      name: mode === "world" ? "World country mode" : "United States state mode"
+    });
+  }, []);
 
   return (
-    <main className="min-h-screen">
-      <nav
-        className="sticky top-0 right-0 left-0 z-10 flex items-start justify-between gap-4 border-b border-[#d7e2df] bg-white/90 p-3 md:items-center md:gap-[18px] md:px-[22px] md:py-3.5"
-        aria-label="Dashboard sections"
-      >
-        <div className="grid min-w-0 gap-[3px] md:min-w-60">
-          <span className="text-xs font-black tracking-normal text-[#00856f] uppercase">
-            Solstice Surface Systems
-          </span>
-          <strong className="text-base">Retrofit solar cleaning overlays</strong>
-        </div>
-        <div className="flex gap-2 overflow-x-auto">
-          {tabs.map((tab) => (
-            <button
-              aria-pressed={activeTab === tab.id}
-              className={cx(
-                "cursor-pointer border-0 px-3.5 py-3 text-sm font-black whitespace-nowrap transition-colors disabled:cursor-default disabled:opacity-45",
-                activeTab === tab.id
-                  ? "bg-[#103f3f] text-white"
-                  : "bg-transparent text-[#5c6d70] hover:bg-[#eef5f2] hover:text-[#132326]"
-              )}
-              key={tab.id}
-              onClick={() => activateTab(tab.id)}
-              type="button"
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
-      </nav>
+    <main
+      className={cx(
+        "min-h-screen overflow-x-hidden bg-[#061116] text-[#e9fbf7]",
+        activePage === "optimizer" && "lg:h-screen lg:overflow-hidden"
+      )}
+    >
+      <Header activePage={activePage} />
 
-      {activeTab === "home" && <HomePanel onExplore={() => activateTab("optimizer")} />}
-
-      {activeTab === "optimizer" && (
+      {activePage === "optimizer" && (
         <OptimizerPanel
           hoveredRegion={hoveredRegion}
           mapMode={mapMode}
-          onBack={() => setSelectedRegion(null)}
           onHover={setHoveredRegion}
           onMarineSelect={selectMarine}
+          onModeChange={switchMode}
           onSelect={selectGeo}
-          onWorld={() => {
-            setMapMode("world");
-            setSelectedRegion(null);
-          }}
           selectedProfile={selectedProfile}
           selectedRegion={selectedRegion}
         />
       )}
 
-      {activeTab === "patterns" && <PatternsPanel />}
+      {activePage === "product" && <ProductContent />}
+
+      {activePage === "patterns" && <PatternLabContent />}
     </main>
   );
 }
 
-function HomePanel({ onExplore }: { onExplore: () => void }) {
-  return (
-    <section className={cx(pagePadding, "min-h-[calc(100vh-118px)] md:min-h-[calc(100vh-70px)]")}>
-      <div className="grid min-h-[calc(100vh-118px)] content-center gap-5 bg-[#103f3f] p-[clamp(28px,5vw,70px)] text-[#f7fffd] md:min-h-[calc(100vh-118px)]">
-        <p className="m-0 mb-2.5 text-xs font-black tracking-normal text-[#9de3d3] uppercase">
-          Company concept
-        </p>
-        <h1 className="m-0 max-w-[1050px] text-[clamp(2.5rem,5.5vw,5.8rem)] leading-[0.98] tracking-normal max-md:text-[2.2rem]">
-          A retrofit acrylic skin that helps solar panels clean themselves with rain.
-        </h1>
-        <p className="m-0 max-w-[780px] text-[clamp(1rem,1.4vw,1.18rem)] leading-[1.62] text-[#d8ebe7]">
-          Solar farms lose performance as dust, minerals, dried water residue,
-          and pollution build up on the glass. Chemical coatings can wash into
-          the ground below, creating a second environmental cost for a technology
-          meant to reduce one.
-        </p>
-        <p className="m-0 max-w-[780px] text-[clamp(1rem,1.4vw,1.18rem)] leading-[1.62] text-[#d8ebe7]">
-          Our product concept is a thin PMMA overlay with alternating wetting
-          zones: smooth hydrophilic areas capture dust into water, while
-          laser-textured hydrophobic bands release droplets so the dirty water
-          moves down the panel.
-        </p>
-        <button className={primaryButtonClass} onClick={onExplore} type="button">
-          Explore regional design optimizer
-        </button>
-      </div>
+function pageFromPathname(pathname: string): PageId {
+  if (pathname.startsWith("/optimizer")) return "optimizer";
+  if (pathname.startsWith("/product")) return "product";
+  if (pathname.startsWith("/pattern-lab")) return "patterns";
+  return "product";
+}
 
-      <div
-        className="relative grid min-h-[calc(100vh-70px)] content-start justify-items-center gap-6 overflow-hidden bg-[linear-gradient(180deg,rgba(255,255,255,0.92),rgba(237,245,242,0.98)),#eef5f2] px-6 py-[clamp(34px,5vw,72px)] max-md:p-[18px]"
-        aria-label="Product mechanism diagram"
-      >
-        <div className="max-w-[860px] text-center">
-          <p className={eyebrowClass}>Alternating solution</p>
-          <h2 className="m-0 mb-3.5 text-[clamp(2rem,4vw,4.7rem)] leading-none tracking-normal">
-            Capture the dirt first. Release the water next.
-          </h2>
-          <p className="m-0 text-[1.04rem] leading-[1.6] text-[#5c6d70]">
-            The overlay is patterned in the direction of droplet travel. Smooth
-            PMMA hydrophilic bands wet the dust, while dotted hydrophobic
-            micro-textured bands make the dirty water release and continue down
-            the panel.
-          </p>
-        </div>
-        <VerticalStripDesign
-          hydrophilic={62}
-          hydrophobic={38}
-          stripCount={12}
-          variant="large"
-        />
-        <div className="grid max-w-[560px] gap-1.5 text-center">
-          <strong>Final product direction</strong>
-          <span className="leading-[1.55] text-[#5c6d70]">
-            Hydrophilic capture bands alternate with hydrophobic release bands from top to bottom.
+function Header({
+  activePage
+}: {
+  activePage: PageId;
+}) {
+  return (
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[#061116]/90 backdrop-blur-xl">
+      <nav className="flex flex-col gap-3 px-4 py-3 sm:h-[72px] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+        <Link
+          className="group grid gap-0.5 text-left"
+          href="/product"
+        >
+          <span className="text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase transition-colors group-hover:text-[#f0c86b]">
+            Solstice Surface Systems
           </span>
+          <strong className="text-[0.95rem] font-semibold text-white">
+            Retrofit solar cleaning overlays
+          </strong>
+        </Link>
+
+        <div className="flex gap-1 overflow-x-auto border border-white/10 bg-white/[0.03] p-1">
+          {pages.map((page) => (
+            <Link
+              aria-current={activePage === page.id ? "page" : undefined}
+              className={cx(
+                "cursor-pointer px-3.5 py-2 text-xs font-black tracking-normal whitespace-nowrap text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]",
+                activePage === page.id && "bg-white text-[#061116] shadow-[0_0_30px_rgba(71,228,208,0.18)]"
+              )}
+              href={page.href}
+              key={page.id}
+            >
+              {page.label}
+            </Link>
+          ))}
         </div>
-      </div>
-    </section>
+      </nav>
+    </header>
   );
 }
 
 function OptimizerPanel({
   hoveredRegion,
   mapMode,
-  onBack,
   onHover,
   onMarineSelect,
+  onModeChange,
   onSelect,
-  onWorld,
   selectedProfile,
   selectedRegion
 }: {
-  hoveredRegion: string;
-  mapMode: "world" | "us";
-  onBack: () => void;
-  onHover: (name: string) => void;
+  hoveredRegion: HoveredRegion;
+  mapMode: GlobeMode;
+  onHover: (region: HoveredRegion) => void;
   onMarineSelect: (zone: MarineZone) => void;
-  onSelect: (geo: MapGeo, scope: "Country" | "U.S. State") => void;
-  onWorld: () => void;
+  onModeChange: (mode: GlobeMode) => void;
+  onSelect: (geo: RegionFeature, scope: "Country" | "U.S. State") => void;
   selectedProfile: (typeof categoryProfiles)[CategoryId] | null;
   selectedRegion: RegionRecommendation | null;
 }) {
-  if (selectedRegion && selectedProfile) {
-    return (
-      <section
-        className={cx(
-          pagePadding,
-          "grid min-h-[calc(100vh-118px)] grid-cols-1 gap-[22px] lg:min-h-[calc(100vh-70px)] lg:grid-cols-[minmax(300px,390px)_minmax(0,1fr)]"
-        )}
-      >
-        <div className="grid content-start gap-[18px] bg-[linear-gradient(180deg,rgba(17,46,51,0.98),rgba(13,67,63,0.96)),#112e33] p-6 text-white">
-          <button className={secondaryButtonClass} onClick={onBack} type="button">
-            Back to map
-          </button>
-          <p className="m-0 mb-2.5 text-xs font-black tracking-normal text-[#9ee5d8] uppercase">
-            Optimized regional overlay
-          </p>
-          <h1 className="m-0 text-[clamp(2rem,3vw,3.4rem)] leading-[0.98] tracking-normal">
-            {selectedRegion.name}
-          </h1>
-          <p className="m-0 leading-[1.55] text-[#c8dedb]">{selectedRegion.scope}</p>
+  return (
+    <section className="relative isolate min-h-[calc(100svh-72px)] overflow-hidden bg-[linear-gradient(180deg,#08191e_0%,#061116_46%,#041014_100%)] lg:h-[calc(100svh-72px)]">
+      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-30" />
+      <div className="relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:h-[calc(100svh-72px)] lg:grid-cols-[320px_minmax(0,1fr)_380px]">
+        <aside className="z-10 order-2 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:order-1 lg:overflow-y-auto lg:border-t-0 lg:border-r [&::-webkit-scrollbar]:hidden">
+          <div className="grid gap-5">
+            <div>
+              <p className="mb-3 text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
+                Optimizer surface
+              </p>
+              <h1 className="m-0 text-[clamp(3.2rem,5vw,4.4rem)] leading-[0.92] font-black tracking-normal text-white">
+                Region tuned overlay.
+              </h1>
+            </div>
 
-          <div className="grid gap-2.5">
-            <Stat label="PVGIS-style fixed tilt" value={`${selectedRegion.tilt} deg`} />
-            <Stat label="Tilt basis" value={selectedRegion.tiltBasis} />
-            <Stat label="Environmental type" value={selectedProfile.environment} />
-            <Stat label="Water / rainfall" value={selectedRegion.rainfall} />
-            <Stat label="Temperature" value={selectedRegion.temperature} />
-            <Stat label="Water content" value={selectedRegion.waterContent} />
-            <Stat label="Soiling risk" value={selectedRegion.dust} />
-          </div>
+            <p className="m-0 max-w-[28rem] text-sm leading-6 text-[#a7bbb8]">
+              Drag the globe to rotate it. Click a country or U.S. state on the
+              sphere, or choose an ocean by name.
+            </p>
 
-          <div className="grid gap-2 border-l-[5px] border-[#f6b44b] bg-white/10 p-4 text-white">
-            <strong>{selectedRegion.hydrophilic}% hydrophilic</strong>
-            <strong>{selectedRegion.hydrophobic}% hydrophobic</strong>
-            <span className="text-[#cfe6e2]">
-              {selectedRegion.stripCount} alternating bands from top to bottom
-            </span>
+            <div className="grid gap-2">
+              <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+                Region scope
+              </span>
+              <div className="grid grid-cols-2 border border-white/10 bg-white/[0.03] p-1">
+                {(["world", "us"] as GlobeMode[]).map((mode) => (
+                  <button
+                    className={cx(
+                      "cursor-pointer px-3 py-2.5 text-xs font-black text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]",
+                      mapMode === mode && "bg-[#47e4d0] text-[#061116] shadow-[0_0_24px_rgba(71,228,208,0.24)]"
+                    )}
+                    key={mode}
+                    onClick={() => onModeChange(mode)}
+                    type="button"
+                  >
+                    {mode === "world" ? "World" : "U.S. states"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-2">
+              <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+                Ocean / sea
+              </span>
+              <div className="grid max-h-48 gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+                {marineZones.map((zone) => (
+                  <button
+                    className={cx(
+                      "cursor-pointer border border-white/10 px-3 py-2 text-left text-xs font-bold text-[#b7c9c6] transition-all duration-300 hover:border-[#47e4d0]/70 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]",
+                      selectedRegion?.id === zone.id &&
+                        "border-[#f0c86b] bg-[#f0c86b] text-[#061116] hover:bg-[#f0c86b] hover:text-[#061116]"
+                    )}
+                    key={zone.id}
+                    onClick={() => onMarineSelect(zone)}
+                    type="button"
+                  >
+                    {zone.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid gap-3 border-y border-white/10 py-4">
+              <div className="flex items-center justify-between gap-4">
+                <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+                  Hover target
+                </span>
+                {hoveredRegion.coordinates && (
+                  <span className="text-xs font-semibold text-[#f0c86b]">
+                    {hoveredRegion.coordinates[1].toFixed(1)} / {hoveredRegion.coordinates[0].toFixed(1)}
+                  </span>
+                )}
+              </div>
+              <strong className="text-lg leading-tight text-white">{hoveredRegion.name}</strong>
+            </div>
+
+            <div className="hidden gap-3 2xl:grid">
+              <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+                Color legend
+              </span>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+                {Object.entries(labelByCategory).map(([category, label]) => (
+                  <div className="flex items-center justify-between gap-2" key={category}>
+                    <span className="text-xs text-[#b5c8c5]">{label}</span>
+                    <span
+                      className={cx(
+                        "h-2.5 w-12",
+                        legendColorClassByCategory[category as CategoryId]
+                      )}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-          <p className="m-0 leading-[1.55] text-[#c8dedb]">{selectedRegion.note}</p>
+        </aside>
+
+        <div className="relative order-1 min-h-[66svh] lg:order-2 lg:min-h-0">
+          <InteractiveGlobe
+            mode={mapMode}
+            onHover={onHover}
+            onMarineSelect={onMarineSelect}
+            onSelect={onSelect}
+            selectedRegion={selectedRegion}
+          />
         </div>
 
-        <div className="grid content-start justify-items-center gap-[18px] border border-[#d7e2df] bg-white p-6">
-          <div className={panelHeadingClass}>
-            <p className={eyebrowClass}>Main implemented pattern</p>
-            <h2 className={panelHeadingTitleClass}>Vertical-flow alternating stripe overlay</h2>
-            <p className={mutedTextClass}>
-              The optimization changes the frequency and balance of hydrophobic
-              release bands. Water travels downward through each hydrophilic and
-              hydrophobic transition.
+        <RegionInspector
+          profile={selectedProfile}
+          selectedRegion={selectedRegion}
+        />
+      </div>
+    </section>
+  );
+}
+
+function InteractiveGlobe({
+  mode,
+  onHover,
+  onMarineSelect,
+  onSelect,
+  selectedRegion
+}: {
+  mode: GlobeMode;
+  onHover: (region: HoveredRegion) => void;
+  onMarineSelect: (zone: MarineZone) => void;
+  onSelect: (geo: RegionFeature, scope: "Country" | "U.S. State") => void;
+  selectedRegion: RegionRecommendation | null;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const callbacksRef = useRef({ onHover, onMarineSelect, onSelect });
+  const selectedRef = useRef(selectedRegion);
+  const borderMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
+  const focusRef = useRef<GlobeFocus | null>(null);
+  const markerRef = useRef<THREE.Group | null>(null);
+
+  useEffect(() => {
+    callbacksRef.current = { onHover, onMarineSelect, onSelect };
+  }, [onHover, onMarineSelect, onSelect]);
+
+  useEffect(() => {
+    selectedRef.current = selectedRegion;
+    focusRef.current = selectedRegion
+      ? {
+          longitude: selectedRegion.longitude,
+          latitude: selectedRegion.latitude,
+          snap: true
+        }
+      : null;
+
+    const material = borderMaterialRef.current;
+    if (material) {
+      const currentTexture = material.map;
+      const texture = new THREE.CanvasTexture(
+        createBorderTexture({ mode, selectedId: selectedRegion?.id })
+      );
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = 8;
+      material.map = texture;
+      material.needsUpdate = true;
+      currentTexture?.dispose();
+    }
+
+    const marker = markerRef.current;
+    if (marker) {
+      if (selectedRegion) {
+        const position = lonLatToVector3(
+          selectedRegion.longitude,
+          selectedRegion.latitude,
+          2.58
+        );
+        marker.position.copy(position);
+        marker.quaternion.setFromUnitVectors(
+          new THREE.Vector3(0, 0, 1),
+          position.clone().normalize()
+        );
+        marker.visible = true;
+      } else {
+        marker.visible = false;
+      }
+    }
+  }, [mode, selectedRegion]);
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const activeFeatures = mode === "world" ? worldFeatures : stateFeatures;
+    const scope = mode === "world" ? "Country" : "U.S. State";
+    const renderer = new THREE.WebGLRenderer({
+      alpha: true,
+      antialias: true,
+      powerPreference: "high-performance"
+    });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.setClearColor(0x000000, 0);
+    container.appendChild(renderer.domElement);
+    const maxAnisotropy = renderer.capabilities.getMaxAnisotropy();
+
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+    camera.position.set(0, 0.22, 8.25);
+
+    const group = new THREE.Group();
+    scene.add(group);
+
+    renderer.outputColorSpace = THREE.SRGBColorSpace;
+    renderer.domElement.style.cursor = "grab";
+    renderer.domElement.style.touchAction = "none";
+
+    const textureLoader = new THREE.TextureLoader();
+    textureLoader.setCrossOrigin("anonymous");
+    const earthTexture = textureLoader.load(earthTextureUrl);
+    earthTexture.colorSpace = THREE.SRGBColorSpace;
+    earthTexture.anisotropy = maxAnisotropy;
+    earthTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    earthTexture.magFilter = THREE.LinearFilter;
+    const bumpTexture = textureLoader.load(earthBumpTextureUrl);
+    bumpTexture.anisotropy = maxAnisotropy;
+    const waterTexture = textureLoader.load(earthWaterTextureUrl);
+    waterTexture.anisotropy = maxAnisotropy;
+
+    const borderTexture = new THREE.CanvasTexture(
+      createBorderTexture({ mode, selectedId: selectedRef.current?.id })
+    );
+    borderTexture.colorSpace = THREE.SRGBColorSpace;
+    borderTexture.anisotropy = maxAnisotropy;
+    borderTexture.minFilter = THREE.LinearMipmapLinearFilter;
+    borderTexture.magFilter = THREE.LinearFilter;
+
+    const globeMaterial = new THREE.MeshPhongMaterial({
+      bumpMap: bumpTexture,
+      bumpScale: 0.075,
+      map: earthTexture,
+      shininess: 18,
+      specular: new THREE.Color(0x7f9099),
+      specularMap: waterTexture
+    });
+
+    const globe = new THREE.Mesh(
+      new THREE.SphereGeometry(2.5, 128, 96),
+      globeMaterial
+    );
+    group.add(globe);
+
+    const borderMaterial = new THREE.MeshBasicMaterial({
+      depthWrite: false,
+      map: borderTexture,
+      polygonOffset: true,
+      polygonOffsetFactor: -1,
+      transparent: true
+    });
+    borderMaterialRef.current = borderMaterial;
+    const borders = new THREE.Mesh(
+      new THREE.SphereGeometry(2.508, 128, 96),
+      borderMaterial
+    );
+    group.add(borders);
+
+    const cloudsTexture = textureLoader.load(cloudsTextureUrl);
+    cloudsTexture.anisotropy = maxAnisotropy;
+    const clouds = new THREE.Mesh(
+      new THREE.SphereGeometry(2.515, 96, 64),
+      new THREE.MeshPhongMaterial({
+        depthWrite: false,
+        map: cloudsTexture,
+        opacity: 0.48,
+        transparent: true
+      })
+    );
+    group.add(clouds);
+
+    const atmosphere = new THREE.Mesh(
+      new THREE.SphereGeometry(2.56, 96, 64),
+      new THREE.MeshBasicMaterial({
+        color: 0x64fff0,
+        opacity: 0.09,
+        side: THREE.BackSide,
+        transparent: true
+      })
+    );
+    scene.add(atmosphere);
+
+    const marker = new THREE.Group();
+    const markerRing = new THREE.Mesh(
+      new THREE.TorusGeometry(0.16, 0.012, 8, 64),
+      new THREE.MeshBasicMaterial({ color: 0xf7d779 })
+    );
+    const markerDot = new THREE.Mesh(
+      new THREE.SphereGeometry(0.045, 20, 20),
+      new THREE.MeshBasicMaterial({ color: 0xffffff })
+    );
+    marker.add(markerRing, markerDot);
+    marker.visible = false;
+    group.add(marker);
+    markerRef.current = marker;
+
+    const starGeometry = new THREE.BufferGeometry();
+    const starPositions: number[] = [];
+    for (let index = 0; index < 550; index += 1) {
+      const radius = 12 + Math.random() * 20;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      starPositions.push(
+        radius * Math.sin(phi) * Math.cos(theta),
+        radius * Math.sin(phi) * Math.sin(theta),
+        radius * Math.cos(phi)
+      );
+    }
+    starGeometry.setAttribute(
+      "position",
+      new THREE.Float32BufferAttribute(starPositions, 3)
+    );
+    const stars = new THREE.Points(
+      starGeometry,
+      new THREE.PointsMaterial({
+        color: 0xaee7df,
+        opacity: 0.36,
+        size: 0.018,
+        transparent: true
+      })
+    );
+    scene.add(stars);
+
+    scene.add(new THREE.AmbientLight(0x7aa7a0, 0.72));
+    const keyLight = new THREE.DirectionalLight(0xffffff, 2.8);
+    keyLight.position.set(4.2, 3.2, 5.4);
+    scene.add(keyLight);
+    const rimLight = new THREE.DirectionalLight(0x47e4d0, 1.6);
+    rimLight.position.set(-5, 1.5, -3);
+    scene.add(rimLight);
+
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const targetRotation = new THREE.Vector2(0.1, -0.45);
+    const currentRotation = new THREE.Vector2(0.1, -0.45);
+    let pointerInside = false;
+    let frameId = 0;
+    let userHasDragged = false;
+    const dragState = {
+      isDown: false,
+      lastX: 0,
+      lastY: 0,
+      moved: false,
+      pointerId: -1,
+      startX: 0,
+      startY: 0
+    };
+
+    const sizeRenderer = () => {
+      const { clientWidth, clientHeight } = container;
+      const width = Math.max(clientWidth, 320);
+      const height = Math.max(clientHeight, 420);
+      renderer.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+    };
+
+    const resizeObserver = new ResizeObserver(sizeRenderer);
+    resizeObserver.observe(container);
+    sizeRenderer();
+
+    const setPointer = (event: PointerEvent) => {
+      const bounds = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - bounds.left) / bounds.width) * 2 - 1;
+      pointer.y = -(((event.clientY - bounds.top) / bounds.height) * 2 - 1);
+    };
+
+    const pickRegion = (event: PointerEvent) => {
+      setPointer(event);
+      raycaster.setFromCamera(pointer, camera);
+
+      const globeHit = raycaster.intersectObject(globe, false)[0];
+      if (!globeHit) return null;
+
+      const localPoint = globe.worldToLocal(globeHit.point.clone()).normalize();
+      const longitude = THREE.MathUtils.radToDeg(Math.atan2(-localPoint.z, localPoint.x));
+      const latitude = THREE.MathUtils.radToDeg(Math.asin(localPoint.y));
+      const geo = findFeatureAtPoint(activeFeatures, longitude, latitude);
+
+      return geo
+        ? {
+            coordinates: [longitude, latitude] as [number, number],
+            geo
+          }
+        : null;
+    };
+
+    const handlePointerMove = (event: PointerEvent) => {
+      pointerInside = true;
+      if (dragState.isDown && dragState.pointerId === event.pointerId) {
+        event.preventDefault();
+        const deltaX = event.clientX - dragState.lastX;
+        const deltaY = event.clientY - dragState.lastY;
+        const distance = Math.hypot(
+          event.clientX - dragState.startX,
+          event.clientY - dragState.startY
+        );
+
+        if (distance > 4) {
+          dragState.moved = true;
+          focusRef.current = null;
+        }
+
+        targetRotation.y += deltaX * 0.0056;
+        targetRotation.x = clamp(targetRotation.x + deltaY * 0.005, -1.18, 1.18);
+        currentRotation.copy(targetRotation);
+        if (dragState.moved) userHasDragged = true;
+        dragState.lastX = event.clientX;
+        dragState.lastY = event.clientY;
+        renderer.domElement.style.cursor = "grabbing";
+        return;
+      }
+
+      const pick = pickRegion(event);
+      renderer.domElement.style.cursor = pick ? "pointer" : "grab";
+
+      if (pick?.geo) {
+        callbacksRef.current.onHover({
+          coordinates: pick.coordinates,
+          name: pick.geo.properties?.name ?? "Selected region"
+        });
+      }
+    };
+
+    const handlePointerLeave = () => {
+      if (dragState.isDown) return;
+      pointerInside = false;
+      renderer.domElement.style.cursor = "grab";
+      callbacksRef.current.onHover({ name: "Rotate the globe or select a region" });
+    };
+
+    const handlePointerDown = (event: PointerEvent) => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      dragState.isDown = true;
+      dragState.pointerId = event.pointerId;
+      dragState.startX = event.clientX;
+      dragState.startY = event.clientY;
+      dragState.lastX = event.clientX;
+      dragState.lastY = event.clientY;
+      dragState.moved = false;
+      pointerInside = true;
+      renderer.domElement.setPointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grabbing";
+    };
+
+    const handlePointerUp = (event: PointerEvent) => {
+      if (!dragState.isDown || dragState.pointerId !== event.pointerId) return;
+      event.preventDefault();
+      dragState.isDown = false;
+      dragState.pointerId = -1;
+      currentRotation.copy(targetRotation);
+      userHasDragged = userHasDragged || dragState.moved;
+      renderer.domElement.releasePointerCapture(event.pointerId);
+      renderer.domElement.style.cursor = "grab";
+
+      const pick = dragState.moved ? null : pickRegion(event);
+      if (pick?.geo) {
+        callbacksRef.current.onSelect(pick.geo, scope);
+      }
+    };
+
+    const handlePointerCancel = (event: PointerEvent) => {
+      if (!dragState.isDown || dragState.pointerId !== event.pointerId) return;
+      dragState.isDown = false;
+      dragState.pointerId = -1;
+      currentRotation.copy(targetRotation);
+      userHasDragged = userHasDragged || dragState.moved;
+      renderer.domElement.style.cursor = "grab";
+    };
+
+    renderer.domElement.addEventListener("pointermove", handlePointerMove);
+    renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
+    renderer.domElement.addEventListener("pointerdown", handlePointerDown);
+    renderer.domElement.addEventListener("pointerup", handlePointerUp);
+    renderer.domElement.addEventListener("pointercancel", handlePointerCancel);
+
+    const animate = () => {
+      const focus = focusRef.current;
+
+      if (focus) {
+        targetRotation.x = THREE.MathUtils.degToRad(clamp(focus.latitude, -52, 52));
+        targetRotation.y = nearestEquivalentAngle(
+          THREE.MathUtils.degToRad(-90 - focus.longitude),
+          currentRotation.y
+        );
+        if (focus.snap) {
+          currentRotation.copy(targetRotation);
+          focus.snap = false;
+        }
+        camera.position.z += (5.82 - camera.position.z) * 0.045;
+      } else {
+        targetRotation.x += (0.08 - targetRotation.x) * 0.018;
+        if (!pointerInside && !userHasDragged) targetRotation.y += 0.0016;
+        camera.position.z += (8.25 - camera.position.z) * 0.04;
+      }
+
+      const rotationEase = focus ? 0.18 : 0.06;
+      currentRotation.x += (targetRotation.x - currentRotation.x) * rotationEase;
+      currentRotation.y += (targetRotation.y - currentRotation.y) * rotationEase;
+      group.rotation.x = currentRotation.x;
+      group.rotation.y = currentRotation.y;
+      atmosphere.rotation.x = currentRotation.x * 0.4;
+      atmosphere.rotation.y = currentRotation.y * 0.4;
+      clouds.rotation.y += THREE.MathUtils.degToRad(-0.006);
+      marker.rotation.z += 0.018;
+      stars.rotation.y += 0.00045;
+
+      camera.lookAt(0, 0, 0);
+      renderer.render(scene, camera);
+      frameId = window.requestAnimationFrame(animate);
+    };
+
+    animate();
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+      resizeObserver.disconnect();
+      renderer.domElement.removeEventListener("pointermove", handlePointerMove);
+      renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
+      renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
+      renderer.domElement.removeEventListener("pointerup", handlePointerUp);
+      renderer.domElement.removeEventListener("pointercancel", handlePointerCancel);
+      renderer.dispose();
+      globe.geometry.dispose();
+      globeMaterial.dispose();
+      earthTexture.dispose();
+      bumpTexture.dispose();
+      waterTexture.dispose();
+      borders.geometry.dispose();
+      borderMaterial.map?.dispose();
+      borderMaterial.dispose();
+      clouds.geometry.dispose();
+      cloudsTexture.dispose();
+      (clouds.material as THREE.Material).dispose();
+      atmosphere.geometry.dispose();
+      (atmosphere.material as THREE.Material).dispose();
+      markerRing.geometry.dispose();
+      (markerRing.material as THREE.Material).dispose();
+      markerDot.geometry.dispose();
+      (markerDot.material as THREE.Material).dispose();
+      starGeometry.dispose();
+      (stars.material as THREE.Material).dispose();
+      borderMaterialRef.current = null;
+      markerRef.current = null;
+      container.removeChild(renderer.domElement);
+    };
+  }, [mode]);
+
+  return (
+    <div className="relative h-full min-h-[66svh] overflow-hidden lg:min-h-[calc(100svh-72px)]">
+      <div
+        ref={containerRef}
+        data-testid="three-globe"
+        className="absolute inset-0"
+        role="application"
+        aria-label="Interactive 3D globe region optimizer"
+      />
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-[linear-gradient(0deg,#061116_0%,rgba(6,17,22,0.82)_32%,transparent_100%)]" />
+      <div className="pointer-events-none absolute top-5 left-5 hidden max-w-[19rem] gap-2 border-l border-[#47e4d0]/60 pl-4 text-sm leading-6 text-[#bad2ce] md:grid">
+        <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#47e4d0] uppercase">
+          Live globe
+        </span>
+        Drag to rotate. Countries are outlined over a textured Earth surface.
+      </div>
+    </div>
+  );
+}
+
+function RegionInspector({
+  profile,
+  selectedRegion
+}: {
+  profile: (typeof categoryProfiles)[CategoryId] | null;
+  selectedRegion: RegionRecommendation | null;
+}) {
+  if (!selectedRegion || !profile) {
+    return (
+      <aside className="z-10 order-3 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-t-0 lg:border-l [&::-webkit-scrollbar]:hidden">
+        <div className="grid h-full content-between gap-8">
+          <div className="grid gap-5">
+            <p className="text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
+              Awaiting selection
             </p>
+            <div className="grid gap-4">
+              <h2 className="m-0 text-4xl leading-none font-black text-white">
+                Drag the globe, then click a region.
+              </h2>
+              <p className="m-0 text-sm leading-6 text-[#a7bbb8]">
+                The selected surface opens here with the coating mix, tilt
+                guidance, water behavior, and soiling risk.
+              </p>
+            </div>
+          </div>
+          <VerticalStripDesign hydrophilic={66} hydrophobic={34} stripCount={10} />
+        </div>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="z-10 order-3 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-t-0 lg:border-l [&::-webkit-scrollbar]:hidden">
+      <div className="grid gap-6">
+        <div className="grid gap-3">
+          <div className="flex items-start justify-between gap-4">
+            <p className="m-0 text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
+              Selected surface
+            </p>
+            <span className="border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-black text-[#f0c86b]">
+              {selectedRegion.scope}
+            </span>
+          </div>
+          <h2 className="m-0 text-5xl leading-[0.92] font-black text-white">
+            {selectedRegion.name}
+          </h2>
+          <p className="m-0 text-sm leading-6 text-[#a7bbb8]">{selectedRegion.note}</p>
+        </div>
+
+        <div className="grid grid-cols-2 border border-white/10">
+          <DataTile label="Tilt" value={`${selectedRegion.tilt} deg`} />
+          <DataTile label="Type" value={profile.environment} />
+          <DataTile label="Water" value={selectedRegion.waterContent} />
+          <DataTile label="Soiling" value={selectedRegion.dust} />
+        </div>
+
+        <div className="grid gap-3">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="m-0 text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+                Coating mix
+              </p>
+              <strong className="text-2xl text-white">
+                {selectedRegion.hydrophilic}% / {selectedRegion.hydrophobic}%
+              </strong>
+            </div>
+            <span className="text-sm font-semibold text-[#f0c86b]">
+              {selectedRegion.stripCount} bands
+            </span>
           </div>
           <VerticalStripDesign
             hydrophilic={selectedRegion.hydrophilic}
             hydrophobic={selectedRegion.hydrophobic}
             stripCount={selectedRegion.stripCount}
-            variant="hero"
           />
         </div>
-      </section>
-    );
-  }
 
-  return (
-    <section
-      className={cx(
-        pagePadding,
-        "grid min-h-[calc(100vh-118px)] grid-rows-[auto_1fr] gap-[18px] md:min-h-[calc(100vh-70px)]"
-      )}
-    >
-      <div className="flex flex-col items-start justify-between gap-[18px] lg:flex-row lg:items-end">
-        <div>
-          <p className={eyebrowClass}>Region optimizer</p>
-          <h1 className="m-0 text-[clamp(2rem,4vw,4.6rem)] leading-[0.98] tracking-normal max-md:text-[2.2rem]">
-            {mapMode === "world" ? "Select a country, sea, or ocean" : "Select a U.S. state"}
-          </h1>
-          <p className={cx(mutedTextClass, "max-w-[780px]")}>
-            The map estimates a business-prototype overlay pattern from climate,
-            moisture, dust risk, and PVGIS-style annual tilt guidance.
-          </p>
+        <div className="grid gap-3 border-y border-white/10 py-5">
+          <StatLine label="Rainfall" value={selectedRegion.rainfall} />
+          <StatLine label="Temperature" value={selectedRegion.temperature} />
+          <StatLine label="Tilt basis" value={selectedRegion.tiltBasis} />
         </div>
-        <button className={primaryButtonClass} disabled={mapMode === "world"} onClick={onWorld} type="button">
-          World map
-        </button>
       </div>
-
-      <MapView
-        hoveredRegion={hoveredRegion}
-        mapMode={mapMode}
-        onHover={onHover}
-        onMarineSelect={onMarineSelect}
-        onSelect={onSelect}
-      />
-    </section>
+    </aside>
   );
 }
 
-function PatternsPanel() {
+function DataTile({ label, value }: { label: string; value: string }) {
   return (
-    <section
-      className={cx(
-        pagePadding,
-        "grid min-h-[calc(100vh-118px)] grid-cols-1 gap-[18px] border border-[#d7e2df] bg-white md:min-h-[calc(100vh-70px)] lg:grid-cols-2"
-      )}
-    >
-      <div className="col-span-full justify-self-stretch">
-        <p className={eyebrowClass}>Other versions under testing</p>
-        <h1 className="m-0 text-[clamp(2rem,4vw,4.8rem)] leading-[0.98] tracking-normal max-md:text-[2.2rem]">
-          Future alternating-design variants
-        </h1>
-        <p className={mutedTextClass}>
-          The product path is still the top-to-bottom alternating stripe
-          overlay. These concepts are under testing to improve directional dust
-          transport, reduce droplet pinning, and minimize optical loss.
-        </p>
-      </div>
-
-      <article className="col-span-full grid grid-cols-1 gap-[18px] border border-[#d7e2df] bg-white p-[18px] lg:grid-cols-[minmax(220px,0.9fr)_minmax(0,1fr)]">
-        <VerticalStripDesign hydrophilic={66} hydrophobic={34} stripCount={12} variant="card" />
-        <div>
-          <h2 className={panelHeadingTitleClass}>Baseline alternating stripe design</h2>
-          <p className={mutedTextClass}>
-            The main design places hydrophilic and hydrophobic regions as
-            horizontal bands so droplets cross transitions while flowing
-            downward.
-          </p>
-        </div>
-      </article>
-
-      <TestingCard
-        description="A continuous wettability gradient moves from hydrophilic at the top toward more hydrophobic release zones at the bottom."
-        kind="gradient"
-        title="Continuous wettability gradient"
-      />
-      <TestingCard
-        description="Nested square bands test whether repeated perimeter transitions can move dust outward while preserving transparency."
-        kind="rings"
-        title="Square-ring gradient"
-      />
-      <TestingCard
-        description="Asymmetric band spacing tests whether non-uniform transitions reduce interfacial droplet pinning."
-        kind="asymmetric"
-        title="Asymmetric alternating bands"
-      />
-    </section>
+    <div className="grid min-h-24 content-between gap-3 border-r border-b border-white/10 p-3 last:border-r-0">
+      <span className="text-[0.68rem] font-black tracking-[0.18em] text-[#708b88] uppercase">
+        {label}
+      </span>
+      <strong className="text-base leading-tight text-white">{value}</strong>
+    </div>
   );
 }
 
-function MapView({
-  hoveredRegion,
-  mapMode,
-  onHover,
-  onMarineSelect,
-  onSelect
-}: {
-  hoveredRegion: string;
-  mapMode: "world" | "us";
-  onHover: (name: string) => void;
-  onMarineSelect: (zone: MarineZone) => void;
-  onSelect: (geo: MapGeo, scope: "Country" | "U.S. State") => void;
-}) {
-  const geography = (mapMode === "world" ? worldMap : usMap) as Record<
-    string,
-    unknown
-  >;
-  const projection = mapMode === "world" ? "geoEqualEarth" : "geoAlbersUsa";
-  const scope = mapMode === "world" ? "Country" : "U.S. State";
-
+function StatLine({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid min-h-0 gap-2.5">
-      {mapMode === "world" && (
-        <div
-          className="grid grid-cols-2 gap-2 md:grid-cols-4 xl:grid-cols-7"
-          aria-label="Connected ocean and sea regions"
-        >
-          {marineZones.map((zone) => (
-            <button
-              className="min-h-[38px] cursor-pointer border-0 bg-[#173236] p-2 text-xs font-black text-white transition-colors hover:bg-[#bc6a1f] focus-visible:bg-[#bc6a1f] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#00856f]"
-              key={zone.id}
-              onClick={() => onMarineSelect(zone)}
-              onMouseEnter={() => onHover(zone.name)}
-              onMouseLeave={() => onHover("Hover a country, state, sea, or ocean")}
-              type="button"
-            >
-              {zone.name}
-            </button>
-          ))}
-        </div>
-      )}
-      <div className="min-h-[64vh] overflow-hidden border border-[#d7e2df] bg-[#f8fbfa]">
-        <ComposableMap
-          className="block h-auto w-full"
-          height={560}
-          projection={projection}
-          projectionConfig={mapMode === "world" ? { scale: 170 } : { scale: 1080 }}
-          width={980}
-        >
-          {mapMode === "world" && <Graticule stroke="#cfdad7" strokeWidth={0.6} />}
-          <Geographies geography={geography}>
-            {({ geographies }: { geographies: MapGeo[] }) =>
-              geographies.map((geo) => {
-                const name = geo.properties?.name ?? "";
-
-                return (
-                  <Geography
-                    aria-label={name}
-                    className="fill-[#c8d7d3] stroke-white stroke-[0.65] outline-none transition-colors hover:fill-[#66b6aa] focus:fill-[#66b6aa]"
-                    geography={geo}
-                    key={geo.rsmKey}
-                    onClick={() => onSelect(geo, scope)}
-                    onMouseEnter={() => onHover(name)}
-                    onMouseLeave={() => onHover("Hover a country, state, sea, or ocean")}
-                    role="button"
-                    tabIndex={0}
-                  />
-                );
-              })
-            }
-          </Geographies>
-          {mapMode === "world" &&
-            marineZones.map((zone) => (
-              <Marker coordinates={zone.coordinates} key={zone.id}>
-                <g
-                  aria-label={zone.name}
-                  className="group cursor-pointer outline-none"
-                  onClick={() => onMarineSelect(zone)}
-                  onMouseEnter={() => onHover(zone.name)}
-                  onMouseLeave={() => onHover("Hover a country, state, sea, or ocean")}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <circle
-                    className="fill-[#bc6a1f] stroke-white stroke-2 group-hover:fill-[#f0c86b] group-focus:fill-[#f0c86b]"
-                    r={7}
-                  />
-                  <text
-                    className="pointer-events-none fill-[#173236] text-[10px] font-black stroke-white/90 stroke-[3px] [paint-order:stroke]"
-                    textAnchor="middle"
-                    y={-12}
-                  >
-                    {zone.name}
-                  </text>
-                </g>
-              </Marker>
-            ))}
-        </ComposableMap>
-      </div>
-
-      <div className="flex flex-col justify-between gap-4 text-sm text-[#5c6d70] md:flex-row">
-        <span>{hoveredRegion}</span>
-        <span>Click land or a marked marine zone to generate the overlay design.</span>
-      </div>
+    <div className="grid gap-1">
+      <span className="text-[0.68rem] font-black tracking-[0.2em] text-[#708b88] uppercase">
+        {label}
+      </span>
+      <strong className="text-sm leading-5 text-[#dbe9e6]">{value}</strong>
     </div>
   );
 }
@@ -995,22 +1492,16 @@ function MapView({
 function VerticalStripDesign({
   hydrophilic,
   hydrophobic,
-  stripCount,
-  variant
+  stripCount
 }: {
   hydrophilic: number;
   hydrophobic: number;
   stripCount: number;
-  variant: "large" | "hero" | "card";
 }) {
-  const strips = Array.from({ length: stripCount }, (_, index) => {
-    const isHydrophobic = index % 2 === 1;
-
-    return {
-      id: index,
-      isHydrophobic
-    };
-  });
+  const strips = Array.from({ length: stripCount }, (_, index) => ({
+    id: index,
+    isHydrophobic: index % 2 === 1
+  }));
   const hydrophilicFlexClasses: Record<number, string> = {
     42: "flex-[0.9]",
     52: "flex-[0.95]",
@@ -1033,124 +1524,35 @@ function VerticalStripDesign({
     48: "flex-[1.07]",
     58: "flex-[1.29]"
   };
-  const rootClass = cx(
-    "grid justify-items-center gap-3",
-    variant === "large" && "w-full max-w-[560px]",
-    variant === "hero" && "w-full max-w-[720px]",
-    variant === "card" && "w-full max-w-[360px]"
-  );
-  const sheetClass = cx(
-    "flex w-full max-w-[430px] flex-col overflow-hidden border-[3px] border-[#33464a] bg-white shadow-[0_18px_55px_rgba(13,36,38,0.16)]",
-    variant === "hero" && "h-[clamp(360px,64vh,700px)]",
-    variant === "card" && "h-[270px]",
-    variant === "large" && "h-[clamp(300px,54vh,610px)] max-md:h-[390px]"
-  );
 
   return (
     <div
-      aria-label={`${hydrophilic}% hydrophilic and ${hydrophobic}% hydrophobic vertical-flow alternating stripe design`}
-      className={rootClass}
+      aria-label={`${hydrophilic}% hydrophilic and ${hydrophobic}% hydrophobic stripe design`}
+      className="grid w-full max-w-[360px] gap-3"
       role="img"
     >
-      <div
-        className="relative grid grid-cols-[5px_auto] items-center gap-x-2.5 gap-y-[3px] border border-[#d7e2df] bg-white px-3.5 py-2.5 text-left leading-none text-[#103f3f] shadow-[0_8px_28px_rgba(13,36,38,0.08)]"
-        aria-hidden="true"
-      >
-        <span className="row-span-2 h-9 w-[5px] bg-[#ef3d33]" />
-        <span className="text-xs font-black uppercase">Water flow</span>
-        <strong className="col-start-2 text-[0.72rem] font-extrabold text-[#5c6d70] uppercase">
-          down panel
-        </strong>
-        <span className="absolute top-[43px] left-2 h-0 w-0 border-x-8 border-t-[12px] border-x-transparent border-t-[#ef3d33]" />
-      </div>
-      <div className={sheetClass}>
-        {strips.map((strip) => (
-          <span
-            className={cx(
-              "min-h-2",
-              strip.isHydrophobic
-                ? "bg-[radial-gradient(circle,rgba(255,255,255,0.72)_0_1.2px,transparent_1.9px),linear-gradient(180deg,#ffc76a,#f6b44b)] [background-size:8px_8px,auto]"
-                : "bg-[linear-gradient(180deg,#f4fffc,#d8f5f1)]",
-              strip.isHydrophobic
-                ? hydrophobicFlexClasses[hydrophobic] ?? "flex-1"
-                : hydrophilicFlexClasses[hydrophilic] ?? "flex-1"
-            )}
-            key={strip.id}
-          />
-        ))}
-      </div>
-      <div className="flex flex-wrap justify-center gap-2.5">
-        <span className="border border-[#d7e2df] bg-[#d8f5f1] px-2.5 py-2 text-xs font-black text-[#132326]">
-          Hydrophilic capture
-        </span>
-        <span className="border border-[#d7e2df] bg-[radial-gradient(circle,rgba(255,255,255,0.65)_0_1px,transparent_1.7px),#f6b44b] px-2.5 py-2 text-xs font-black text-[#132326] [background-size:7px_7px,auto]">
-          Hydrophobic release
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function TestingCard({
-  description,
-  kind,
-  title
-}: {
-  description: string;
-  kind: "gradient" | "rings" | "asymmetric";
-  title: string;
-}) {
-  const ringClasses = [
-    "h-[82%] w-[82%]",
-    "h-[60%] w-[60%]",
-    "h-[38%] w-[38%]",
-    "h-[18%] w-[18%]"
-  ];
-
-  return (
-    <article className="grid grid-cols-1 gap-[18px] border border-[#d7e2df] bg-white p-[18px] max-md:p-3.5 lg:grid-cols-[minmax(220px,0.9fr)_minmax(0,1fr)]">
-      <div
-        className={cx(
-          "relative aspect-[1.45/1] overflow-hidden border-[3px] border-[#4d5658]",
-          kind === "gradient" &&
-            "bg-[linear-gradient(180deg,#ffffff_0_28%,#d8f5f1_46%,#f6b44b_100%)]",
-          kind === "rings" &&
-            "grid justify-items-center bg-[radial-gradient(circle,rgba(255,255,255,0.28)_0_1px,transparent_2px),#dad3c7] [background-size:8px_8px]",
-          kind === "asymmetric" && "flex flex-col"
-        )}
-        aria-hidden="true"
-      >
-        {kind === "rings" && (
-          <>
-            {ringClasses.map((className) => (
-              <span
-                className={cx("absolute border-[10px] border-[rgba(35,44,45,0.7)]", className)}
-                key={className}
-              />
-            ))}
-          </>
-        )}
-        {kind === "asymmetric" &&
-          Array.from({ length: 9 }).map((_, index) => (
+      <div className="h-[260px] overflow-hidden border border-white/15 bg-white/5">
+        <div className="flex h-full flex-col">
+          {strips.map((strip) => (
             <span
-              className={index % 2 === 0 ? "flex-[1.7] bg-[#d8f5f1]" : "flex-[0.7] bg-[#f6b44b]"}
-              key={index}
+              className={cx(
+                "min-h-2",
+                strip.isHydrophobic
+                  ? "bg-[radial-gradient(circle,rgba(255,255,255,0.72)_0_1.2px,transparent_1.9px),linear-gradient(180deg,#f4be62,#d08a30)] [background-size:8px_8px,auto]"
+                  : "bg-[linear-gradient(180deg,#f6fffd,#aeece4)]",
+                strip.isHydrophobic
+                  ? hydrophobicFlexClasses[hydrophobic] ?? "flex-1"
+                  : hydrophilicFlexClasses[hydrophilic] ?? "flex-1"
+              )}
+              key={strip.id}
             />
           ))}
+        </div>
       </div>
-      <div>
-        <h2 className={panelHeadingTitleClass}>{title}</h2>
-        <p className={mutedTextClass}>{description}</p>
+      <div className="flex flex-wrap gap-2 text-xs font-black">
+        <span className="bg-[#aeece4] px-2.5 py-1.5 text-[#061116]">hydrophilic</span>
+        <span className="bg-[#d08a30] px-2.5 py-1.5 text-[#061116]">hydrophobic</span>
       </div>
-    </article>
-  );
-}
-
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="grid gap-[5px] border border-white/15 bg-white/10 p-3">
-      <span className="text-xs font-black text-[#9ee5d8] uppercase">{label}</span>
-      <strong className="text-base leading-[1.35]">{value}</strong>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -9,11 +10,11 @@ export const metadata: Metadata = {
 export default function RootLayout({
   children
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[#f4f7f3] font-sans text-[#132326] antialiased">
+      <body className="min-h-screen max-w-full overflow-x-hidden bg-[#061116] font-sans text-[#e9fbf7] antialiased">
         {children}
       </body>
     </html>
