@@ -606,18 +606,6 @@ function recommendationFromMarine(zone: MarineZone): RegionRecommendation {
   });
 }
 
-function lonLatToVector3(longitude: number, latitude: number, radius: number) {
-  const phi = THREE.MathUtils.degToRad(latitude);
-  const theta = THREE.MathUtils.degToRad(longitude);
-  const cosPhi = Math.cos(phi);
-
-  return new THREE.Vector3(
-    radius * cosPhi * Math.cos(theta),
-    radius * Math.sin(phi),
-    -radius * cosPhi * Math.sin(theta)
-  );
-}
-
 function findFeatureAtPoint(features: RegionFeature[], longitude: number, latitude: number) {
   return features.find((geo) => geoContains(geo, [longitude, latitude]));
 }
@@ -651,11 +639,11 @@ function createBorderTexture({
     context.beginPath();
     path(geo);
     if (isSelected) {
-      context.fillStyle = "rgba(247, 215, 121, 0.38)";
+      context.fillStyle = "rgba(158, 231, 255, 0.18)";
       context.fill();
     }
     context.strokeStyle = "rgba(0, 0, 0, 0.9)";
-    context.lineWidth = isSelected ? 7 : 3.2;
+    context.lineWidth = isSelected ? 4.6 : 3.2;
     context.stroke();
   });
 
@@ -667,11 +655,11 @@ function createBorderTexture({
       context.beginPath();
       path(geo);
       if (isSelected) {
-        context.fillStyle = "rgba(247, 215, 121, 0.42)";
+        context.fillStyle = "rgba(158, 231, 255, 0.2)";
         context.fill();
       }
       context.strokeStyle = "rgba(0, 0, 0, 0.94)";
-      context.lineWidth = isSelected ? 7.4 : 3.6;
+      context.lineWidth = isSelected ? 4.8 : 3.6;
       context.stroke();
     });
   }
@@ -684,7 +672,7 @@ export default function Home() {
   const activePage = pageFromPathname(pathname);
   const [mapMode, setMapMode] = useState<GlobeMode>("world");
   const [hoveredRegion, setHoveredRegion] = useState<HoveredRegion>({
-    name: "Rotate the globe or select a region"
+    name: "World view"
   });
   const [selectedRegion, setSelectedRegion] = useState<RegionRecommendation | null>(
     null
@@ -697,21 +685,29 @@ export default function Home() {
 
   const selectGeo = useCallback(
     (geo: RegionFeature, scope: "Country" | "U.S. State") => {
+      const name = geo.properties?.name ?? "";
+
+      if (scope === "Country" && name.includes("United States")) {
+        setMapMode("us");
+        setSelectedRegion(null);
+        setHoveredRegion({ name: "Select a U.S. state" });
+        return;
+      }
+
       setSelectedRegion(recommendationFromGeo(geo, scope));
     },
     []
   );
 
   const selectMarine = useCallback((zone: MarineZone) => {
+    setMapMode("world");
     setSelectedRegion(recommendationFromMarine(zone));
   }, []);
 
-  const switchMode = useCallback((mode: GlobeMode) => {
-    setMapMode(mode);
+  const returnToWorld = useCallback(() => {
+    setMapMode("world");
     setSelectedRegion(null);
-    setHoveredRegion({
-      name: mode === "world" ? "World country mode" : "United States state mode"
-    });
+    setHoveredRegion({ name: "World view" });
   }, []);
 
   return (
@@ -729,7 +725,7 @@ export default function Home() {
           mapMode={mapMode}
           onHover={setHoveredRegion}
           onMarineSelect={selectMarine}
-          onModeChange={switchMode}
+          onWorldView={returnToWorld}
           onSelect={selectGeo}
           selectedProfile={selectedProfile}
           selectedRegion={selectedRegion}
@@ -795,7 +791,7 @@ function OptimizerPanel({
   mapMode,
   onHover,
   onMarineSelect,
-  onModeChange,
+  onWorldView,
   onSelect,
   selectedProfile,
   selectedRegion
@@ -804,7 +800,7 @@ function OptimizerPanel({
   mapMode: GlobeMode;
   onHover: (region: HoveredRegion) => void;
   onMarineSelect: (zone: MarineZone) => void;
-  onModeChange: (mode: GlobeMode) => void;
+  onWorldView: () => void;
   onSelect: (geo: RegionFeature, scope: "Country" | "U.S. State") => void;
   selectedProfile: (typeof categoryProfiles)[CategoryId] | null;
   selectedRegion: RegionRecommendation | null;
@@ -812,64 +808,66 @@ function OptimizerPanel({
   return (
     <section className="relative isolate min-h-[calc(100svh-72px)] overflow-hidden bg-[linear-gradient(180deg,#08191e_0%,#061116_46%,#041014_100%)] lg:h-[calc(100svh-72px)]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-30" />
-      <div className="relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:h-[calc(100svh-72px)] lg:grid-cols-[320px_minmax(0,1fr)_380px]">
+      <div
+        className={cx(
+          "relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:h-[calc(100svh-72px)]",
+          selectedRegion
+            ? "lg:grid-cols-[320px_minmax(0,1fr)_360px]"
+            : "lg:grid-cols-[320px_minmax(0,1fr)]"
+        )}
+      >
         <aside className="z-10 order-2 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:order-1 lg:overflow-y-auto lg:border-t-0 lg:border-r [&::-webkit-scrollbar]:hidden">
           <div className="grid gap-5">
             <div>
               <p className="mb-3 text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
                 Optimizer surface
               </p>
-              <h1 className="m-0 text-[clamp(3.2rem,5vw,4.4rem)] leading-[0.92] font-black tracking-normal text-white">
-                Region tuned overlay.
+              <h1 className="m-0 max-w-full text-[2.65rem] leading-[0.95] font-black tracking-normal break-words text-white 2xl:text-[2.85rem]">
+                Surface optimizer.
               </h1>
             </div>
 
-            <p className="m-0 max-w-[28rem] text-sm leading-6 text-[#a7bbb8]">
-              Drag the globe to rotate it. Click a country or U.S. state on the
-              sphere, or choose an ocean by name.
+            <p className="m-0 max-w-[17rem] text-sm leading-6 text-[#a7bbb8]">
+              Hover pauses the globe. Click land to tune the surface.
             </p>
 
-            <div className="grid gap-2">
-              <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
-                Region scope
-              </span>
-              <div className="grid grid-cols-2 border border-white/10 bg-white/[0.03] p-1">
-                {(["world", "us"] as GlobeMode[]).map((mode) => (
-                  <button
-                    className={cx(
-                      "cursor-pointer px-3 py-2.5 text-xs font-black text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]",
-                      mapMode === mode && "bg-[#47e4d0] text-[#061116] shadow-[0_0_24px_rgba(71,228,208,0.24)]"
-                    )}
-                    key={mode}
-                    onClick={() => onModeChange(mode)}
-                    type="button"
-                  >
-                    {mode === "world" ? "World" : "U.S. states"}
-                  </button>
-                ))}
+            {mapMode === "us" && (
+              <div className="grid gap-2 border-y border-white/10 py-4">
+                <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+                  U.S. states
+                </span>
+                <p className="m-0 text-sm leading-6 text-[#a7bbb8]">
+                  Select a state, or return to the world map.
+                </p>
+                <button
+                  className="cursor-pointer border border-white/10 px-3 py-2 text-left text-xs font-black text-[#dbe9e6] transition-all duration-300 hover:border-[#47e4d0]/70 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]"
+                  onClick={onWorldView}
+                  type="button"
+                >
+                  Back to world
+                </button>
               </div>
-            </div>
+            )}
 
             <div className="grid gap-2">
               <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
-                Ocean / sea
+                Oceans and seas
               </span>
-              <div className="grid max-h-48 gap-1.5 overflow-y-auto pr-1 [scrollbar-width:thin]">
+              <select
+                className="w-full cursor-pointer border border-white/10 bg-[#07161b] px-3 py-3 text-sm font-bold text-[#dbe9e6] outline-none transition-colors duration-300 hover:border-[#47e4d0]/70 focus:border-[#47e4d0]"
+                onChange={(event) => {
+                  const zone = marineZones.find((item) => item.id === event.target.value);
+                  if (zone) onMarineSelect(zone);
+                }}
+                value={selectedRegion?.scope === "Ocean / Sea" ? selectedRegion.id : ""}
+              >
+                <option value="">Choose ocean or sea</option>
                 {marineZones.map((zone) => (
-                  <button
-                    className={cx(
-                      "cursor-pointer border border-white/10 px-3 py-2 text-left text-xs font-bold text-[#b7c9c6] transition-all duration-300 hover:border-[#47e4d0]/70 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]",
-                      selectedRegion?.id === zone.id &&
-                        "border-[#f0c86b] bg-[#f0c86b] text-[#061116] hover:bg-[#f0c86b] hover:text-[#061116]"
-                    )}
-                    key={zone.id}
-                    onClick={() => onMarineSelect(zone)}
-                    type="button"
-                  >
+                  <option key={zone.id} value={zone.id}>
                     {zone.name}
-                  </button>
+                  </option>
                 ))}
-              </div>
+              </select>
             </div>
 
             <div className="grid gap-3 border-y border-white/10 py-4">
@@ -890,13 +888,13 @@ function OptimizerPanel({
               <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
                 Color legend
               </span>
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2">
+              <div className="grid gap-2">
                 {Object.entries(labelByCategory).map(([category, label]) => (
-                  <div className="flex items-center justify-between gap-2" key={category}>
-                    <span className="text-xs text-[#b5c8c5]">{label}</span>
+                  <div className="flex min-w-0 items-center justify-between gap-3" key={category}>
+                    <span className="min-w-0 text-xs text-[#b5c8c5]">{label}</span>
                     <span
                       className={cx(
-                        "h-2.5 w-12",
+                        "h-2.5 w-16 shrink-0",
                         legendColorClassByCategory[category as CategoryId]
                       )}
                     />
@@ -915,12 +913,15 @@ function OptimizerPanel({
             onSelect={onSelect}
             selectedRegion={selectedRegion}
           />
+          {selectedRegion && <MainDesignPreview selectedRegion={selectedRegion} />}
         </div>
 
-        <RegionInspector
-          profile={selectedProfile}
-          selectedRegion={selectedRegion}
-        />
+        {selectedRegion && (
+          <RegionInspector
+            profile={selectedProfile}
+            selectedRegion={selectedRegion}
+          />
+        )}
       </div>
     </section>
   );
@@ -944,7 +945,6 @@ function InteractiveGlobe({
   const selectedRef = useRef(selectedRegion);
   const borderMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
   const focusRef = useRef<GlobeFocus | null>(null);
-  const markerRef = useRef<THREE.Group | null>(null);
 
   useEffect(() => {
     callbacksRef.current = { onHover, onMarineSelect, onSelect };
@@ -973,24 +973,6 @@ function InteractiveGlobe({
       currentTexture?.dispose();
     }
 
-    const marker = markerRef.current;
-    if (marker) {
-      if (selectedRegion) {
-        const position = lonLatToVector3(
-          selectedRegion.longitude,
-          selectedRegion.latitude,
-          2.58
-        );
-        marker.position.copy(position);
-        marker.quaternion.setFromUnitVectors(
-          new THREE.Vector3(0, 0, 1),
-          position.clone().normalize()
-        );
-        marker.visible = true;
-      } else {
-        marker.visible = false;
-      }
-    }
   }, [mode, selectedRegion]);
 
   useEffect(() => {
@@ -1092,20 +1074,6 @@ function InteractiveGlobe({
       })
     );
     scene.add(atmosphere);
-
-    const marker = new THREE.Group();
-    const markerRing = new THREE.Mesh(
-      new THREE.TorusGeometry(0.16, 0.012, 8, 64),
-      new THREE.MeshBasicMaterial({ color: 0xf7d779 })
-    );
-    const markerDot = new THREE.Mesh(
-      new THREE.SphereGeometry(0.045, 20, 20),
-      new THREE.MeshBasicMaterial({ color: 0xffffff })
-    );
-    marker.add(markerRing, markerDot);
-    marker.visible = false;
-    group.add(marker);
-    markerRef.current = marker;
 
     const starGeometry = new THREE.BufferGeometry();
     const starPositions: number[] = [];
@@ -1235,11 +1203,15 @@ function InteractiveGlobe({
       }
     };
 
+    const handlePointerEnter = () => {
+      pointerInside = true;
+    };
+
     const handlePointerLeave = () => {
       if (dragState.isDown) return;
       pointerInside = false;
       renderer.domElement.style.cursor = "grab";
-      callbacksRef.current.onHover({ name: "Rotate the globe or select a region" });
+      callbacksRef.current.onHover({ name: "World view" });
     };
 
     const handlePointerDown = (event: PointerEvent) => {
@@ -1282,6 +1254,7 @@ function InteractiveGlobe({
       renderer.domElement.style.cursor = "grab";
     };
 
+    renderer.domElement.addEventListener("pointerenter", handlePointerEnter);
     renderer.domElement.addEventListener("pointermove", handlePointerMove);
     renderer.domElement.addEventListener("pointerleave", handlePointerLeave);
     renderer.domElement.addEventListener("pointerdown", handlePointerDown);
@@ -1316,7 +1289,6 @@ function InteractiveGlobe({
       atmosphere.rotation.x = currentRotation.x * 0.4;
       atmosphere.rotation.y = currentRotation.y * 0.4;
       clouds.rotation.y += THREE.MathUtils.degToRad(-0.006);
-      marker.rotation.z += 0.018;
       stars.rotation.y += 0.00045;
 
       camera.lookAt(0, 0, 0);
@@ -1329,6 +1301,7 @@ function InteractiveGlobe({
     return () => {
       window.cancelAnimationFrame(frameId);
       resizeObserver.disconnect();
+      renderer.domElement.removeEventListener("pointerenter", handlePointerEnter);
       renderer.domElement.removeEventListener("pointermove", handlePointerMove);
       renderer.domElement.removeEventListener("pointerleave", handlePointerLeave);
       renderer.domElement.removeEventListener("pointerdown", handlePointerDown);
@@ -1348,14 +1321,9 @@ function InteractiveGlobe({
       (clouds.material as THREE.Material).dispose();
       atmosphere.geometry.dispose();
       (atmosphere.material as THREE.Material).dispose();
-      markerRing.geometry.dispose();
-      (markerRing.material as THREE.Material).dispose();
-      markerDot.geometry.dispose();
-      (markerDot.material as THREE.Material).dispose();
       starGeometry.dispose();
       (stars.material as THREE.Material).dispose();
       borderMaterialRef.current = null;
-      markerRef.current = null;
       container.removeChild(renderer.domElement);
     };
   }, [mode]);
@@ -1370,12 +1338,6 @@ function InteractiveGlobe({
         aria-label="Interactive 3D globe region optimizer"
       />
       <div className="pointer-events-none absolute inset-x-0 bottom-0 h-44 bg-[linear-gradient(0deg,#061116_0%,rgba(6,17,22,0.82)_32%,transparent_100%)]" />
-      <div className="pointer-events-none absolute top-5 left-5 hidden max-w-[19rem] gap-2 border-l border-[#47e4d0]/60 pl-4 text-sm leading-6 text-[#bad2ce] md:grid">
-        <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#47e4d0] uppercase">
-          Live globe
-        </span>
-        Drag to rotate. Countries are outlined over a textured Earth surface.
-      </div>
     </div>
   );
 }
@@ -1388,27 +1350,7 @@ function RegionInspector({
   selectedRegion: RegionRecommendation | null;
 }) {
   if (!selectedRegion || !profile) {
-    return (
-      <aside className="z-10 order-3 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-t-0 lg:border-l [&::-webkit-scrollbar]:hidden">
-        <div className="grid h-full content-between gap-8">
-          <div className="grid gap-5">
-            <p className="text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
-              Awaiting selection
-            </p>
-            <div className="grid gap-4">
-              <h2 className="m-0 text-4xl leading-none font-black text-white">
-                Drag the globe, then click a region.
-              </h2>
-              <p className="m-0 text-sm leading-6 text-[#a7bbb8]">
-                The selected surface opens here with the coating mix, tilt
-                guidance, water behavior, and soiling risk.
-              </p>
-            </div>
-          </div>
-          <VerticalStripDesign hydrophilic={66} hydrophobic={34} stripCount={10} />
-        </div>
-      </aside>
-    );
+    return null;
   }
 
   return (
@@ -1450,11 +1392,6 @@ function RegionInspector({
               {selectedRegion.stripCount} bands
             </span>
           </div>
-          <VerticalStripDesign
-            hydrophilic={selectedRegion.hydrophilic}
-            hydrophobic={selectedRegion.hydrophobic}
-            stripCount={selectedRegion.stripCount}
-          />
         </div>
 
         <div className="grid gap-3 border-y border-white/10 py-5">
@@ -1464,6 +1401,64 @@ function RegionInspector({
         </div>
       </div>
     </aside>
+  );
+}
+
+function MainDesignPreview({
+  selectedRegion
+}: {
+  selectedRegion: RegionRecommendation;
+}) {
+  const stripCount = Math.min(selectedRegion.stripCount, 14);
+  const strips = Array.from({ length: stripCount }, (_, index) => ({
+    id: index,
+    isHydrophobic: index % 2 === 1
+  }));
+
+  return (
+    <div className="pointer-events-none absolute bottom-5 left-1/2 z-10 w-[min(22rem,calc(100%-2rem))] -translate-x-1/2 border border-white/12 bg-[#061116]/82 p-3 shadow-[0_22px_80px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+      <div className="mb-3 flex items-end justify-between gap-4">
+        <div>
+          <p className="m-0 text-[0.64rem] font-black tracking-[0.22em] text-[#47e4d0] uppercase">
+            Main design
+          </p>
+          <strong className="text-lg leading-tight text-white">
+            {selectedRegion.name}
+          </strong>
+        </div>
+        <span className="text-xs font-black text-[#dbe9e6]">
+          {selectedRegion.hydrophilic}/{selectedRegion.hydrophobic}
+        </span>
+      </div>
+      <div
+        aria-label={`${selectedRegion.hydrophilic}% hydrophilic and ${selectedRegion.hydrophobic}% hydrophobic coating pattern`}
+        className="h-44 overflow-hidden border border-white/15 bg-white/5"
+        role="img"
+      >
+        <div className="flex h-full flex-col">
+          {strips.map((strip) => (
+            <span
+              className={cx(
+                "min-h-2 basis-0",
+                strip.isHydrophobic
+                  ? "bg-[radial-gradient(circle,rgba(6,17,22,0.34)_0_1.15px,transparent_1.7px),linear-gradient(180deg,#d8f6ff,#9ee7ff)] [background-size:8px_8px,auto]"
+                  : "bg-[linear-gradient(180deg,#ffffff,#edf8f8)]"
+              )}
+              key={strip.id}
+              style={{
+                flexGrow: strip.isHydrophobic
+                  ? selectedRegion.hydrophobic
+                  : selectedRegion.hydrophilic
+              }}
+            />
+          ))}
+        </div>
+      </div>
+      <div className="mt-2 flex flex-wrap gap-2 text-[0.65rem] font-black uppercase tracking-[0.12em]">
+        <span className="bg-white px-2 py-1 text-[#061116]">hydrophilic</span>
+        <span className="bg-[#9ee7ff] px-2 py-1 text-[#061116]">hydrophobic</span>
+      </div>
+    </div>
   );
 }
 
@@ -1485,74 +1480,6 @@ function StatLine({ label, value }: { label: string; value: string }) {
         {label}
       </span>
       <strong className="text-sm leading-5 text-[#dbe9e6]">{value}</strong>
-    </div>
-  );
-}
-
-function VerticalStripDesign({
-  hydrophilic,
-  hydrophobic,
-  stripCount
-}: {
-  hydrophilic: number;
-  hydrophobic: number;
-  stripCount: number;
-}) {
-  const strips = Array.from({ length: stripCount }, (_, index) => ({
-    id: index,
-    isHydrophobic: index % 2 === 1
-  }));
-  const hydrophilicFlexClasses: Record<number, string> = {
-    42: "flex-[0.9]",
-    52: "flex-[0.95]",
-    60: "flex-[1.09]",
-    62: "flex-[1.13]",
-    66: "flex-[1.2]",
-    76: "flex-[1.38]",
-    82: "flex-[1.49]",
-    86: "flex-[1.56]",
-    88: "flex-[1.6]"
-  };
-  const hydrophobicFlexClasses: Record<number, string> = {
-    12: "flex-[0.7]",
-    14: "flex-[0.7]",
-    18: "flex-[0.7]",
-    24: "flex-[0.7]",
-    34: "flex-[0.76]",
-    38: "flex-[0.84]",
-    40: "flex-[0.89]",
-    48: "flex-[1.07]",
-    58: "flex-[1.29]"
-  };
-
-  return (
-    <div
-      aria-label={`${hydrophilic}% hydrophilic and ${hydrophobic}% hydrophobic stripe design`}
-      className="grid w-full max-w-[360px] gap-3"
-      role="img"
-    >
-      <div className="h-[260px] overflow-hidden border border-white/15 bg-white/5">
-        <div className="flex h-full flex-col">
-          {strips.map((strip) => (
-            <span
-              className={cx(
-                "min-h-2",
-                strip.isHydrophobic
-                  ? "bg-[radial-gradient(circle,rgba(255,255,255,0.72)_0_1.2px,transparent_1.9px),linear-gradient(180deg,#f4be62,#d08a30)] [background-size:8px_8px,auto]"
-                  : "bg-[linear-gradient(180deg,#f6fffd,#aeece4)]",
-                strip.isHydrophobic
-                  ? hydrophobicFlexClasses[hydrophobic] ?? "flex-1"
-                  : hydrophilicFlexClasses[hydrophilic] ?? "flex-1"
-              )}
-              key={strip.id}
-            />
-          ))}
-        </div>
-      </div>
-      <div className="flex flex-wrap gap-2 text-xs font-black">
-        <span className="bg-[#aeece4] px-2.5 py-1.5 text-[#061116]">hydrophilic</span>
-        <span className="bg-[#d08a30] px-2.5 py-1.5 text-[#061116]">hydrophobic</span>
-      </div>
     </div>
   );
 }

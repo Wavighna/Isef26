@@ -142,10 +142,10 @@ export function ProductContent() {
 
             <div className="grid gap-8">
               <p className="m-0 max-w-[48rem] text-lg leading-8 text-[#c6d7d3]">
-                The poster evidence centers on a simple insight: hydrophilic
-                surfaces spread water and help loosen adhered particles, while
-                hydrophobic lotus-inspired microtextures help droplets move and
-                carry loosened debris away. The alternating surface coordinates
+                The surface strategy centers on a simple insight: hydrophilic
+                regions spread water and help loosen adhered particles, while
+                hydrophobic microtextures help droplets move and carry loosened
+                debris away. The alternating surface coordinates
                 both behaviors instead of relying on only one wetting regime.
               </p>
 
@@ -269,8 +269,8 @@ function ProductSurfaceVisual() {
   ];
 
   return (
-    <div className="group relative aspect-[0.78/1] h-full max-h-[720px] w-full max-w-[520px] overflow-hidden bg-[#dcefeb] shadow-[0_40px_120px_rgba(0,0,0,0.45)] transition-transform duration-700 hover:-translate-y-2 lg:rotate-[-3deg] lg:hover:rotate-[-1deg]">
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.62)_0%,rgba(216,245,241,0.36)_44%,rgba(15,42,45,0.18)_100%)]" />
+    <div className="group relative aspect-[0.78/1] h-full max-h-[720px] w-full max-w-[520px] overflow-hidden bg-[#f7fcfc] shadow-[0_40px_120px_rgba(0,0,0,0.45)] transition-transform duration-700 hover:-translate-y-2 lg:rotate-[-3deg] lg:hover:rotate-[-1deg]">
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(231,248,252,0.42)_48%,rgba(6,38,48,0.14)_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.34)_42%,transparent_62%)] opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
       {Array.from({ length: 15 }).map((_, index) => (
         <span
@@ -278,8 +278,8 @@ function ProductSurfaceVisual() {
             "absolute inset-x-0 h-[6.7%] transition-transform duration-500",
             topClasses[index],
             index % 2 === 0
-              ? "bg-[linear-gradient(180deg,#f5fffd,#b6eee7)]"
-              : "bg-[radial-gradient(circle,rgba(255,255,255,0.78)_0_1.2px,transparent_2px),linear-gradient(180deg,#f4be62,#d08a30)] [background-size:9px_9px,auto]"
+              ? "bg-[linear-gradient(180deg,#ffffff,#eef9fb)]"
+              : "bg-[radial-gradient(circle,rgba(0,65,92,0.42)_0_1.15px,transparent_1.8px),linear-gradient(180deg,#d9f7ff,#9ee7ff)] [background-size:9px_9px,auto]"
           )}
           key={index}
         />
@@ -299,45 +299,34 @@ function ProductSurfaceVisual() {
 
 export function PatternLabContent() {
   return (
-    <section className="min-h-[calc(100svh-72px)] bg-[#061116] px-5 py-12 sm:px-8 lg:px-12">
-      <div className="mx-auto grid max-w-7xl gap-14">
-        <div className="grid gap-5 border-b border-white/10 pb-10 lg:grid-cols-[0.78fr_1fr] lg:items-end">
+    <section className="min-h-[calc(100svh-72px)] bg-[#061116] px-5 py-8 sm:px-8 lg:px-12">
+      <div className="mx-auto grid max-w-7xl gap-8">
+        <div className="grid gap-5 border-b border-white/10 pb-7 lg:grid-cols-[0.58fr_0.82fr] lg:items-end">
           <div>
             <p className="m-0 mb-3 text-[0.68rem] font-black tracking-[0.28em] text-[#47e4d0] uppercase">
               Pattern lab
             </p>
-            <h1 className="m-0 text-[clamp(3rem,7vw,7rem)] leading-[0.86] font-black text-white">
-              Patterns from the experiment.
+            <h1 className="m-0 text-[clamp(2.7rem,4.9vw,5.3rem)] leading-[0.88] font-black text-white">
+              Coating pattern options.
             </h1>
           </div>
-          <p className="m-0 max-w-[44rem] text-base leading-7 text-[#a7bbb8]">
-            The poster tested three surfaces: fully hydrophilic PMMA, fully
-            hydrophobic laser-textured PMMA, and an alternating surface aligned
-            with droplet flow. The pattern lab turns those designs and future
-            directions into readable study notes.
+          <p className="m-0 max-w-[43rem] text-sm leading-6 text-[#a7bbb8] lg:pb-1">
+            A compact view of the surface layouts behind the coating concept:
+            equal alternating bands, a smoother wettability transition, and
+            square paths that separate hydrophilic wetting from hydrophobic
+            droplet release.
           </p>
         </div>
 
-        <div className="grid gap-12">
+        <div className="grid gap-7">
           <PatternStudy
             eyebrow="Tested surface"
             title="Alternating hydrophilic and hydrophobic bands"
             visual={<MiniStripeSurface />}
             paragraphs={[
-              "This is the core tested design. Hydrophilic regions remain unmodified PMMA, while hydrophobic regions are created with CO2 laser surface patterning inspired by lotus-leaf microtexture.",
-              "The pattern follows droplet flow: water first spreads across hydrophilic PMMA to loosen particulate soiling, then crosses hydrophobic release regions that help droplets move debris down the coupon.",
-              "In cleaning trials, this alternating surface reached the lowest mean residual contamination at 2.02%, outperforming both the hydrophilic and hydrophobic controls under identical conditions."
-            ]}
-          />
-
-          <PatternStudy
-            eyebrow="Density decision"
-            title="30% laser-dot hydrophobic density"
-            visual={<TestingVisual kind="gradient" />}
-            paragraphs={[
-              "Pattern density was screened from 30% to 90% to identify surfaces that became hydrophobic while still allowing light through the PMMA.",
-              "Lower densities performed better overall. The 30% density kept strong water-repellent behavior and produced the highest light transmission among the hydrophobic densities tested.",
-              "This matters because any cleaning benefit has to be balanced against optical loss. A surface that sheds dust but blocks too much light would not help a PV panel."
+              "The baseline layout uses equal-width hydrophilic and hydrophobic bands so every water path crosses the same amount of each surface.",
+              "White hydrophilic bands spread water to wet dust and mineral residue. Baby-blue dotted hydrophobic bands create release zones that help droplets keep moving.",
+              "This pattern is the clearest production direction because it is easy to manufacture, easy to inspect, and directly aligned with downward droplet travel."
             ]}
           />
 
@@ -346,9 +335,9 @@ export function PatternLabContent() {
             title="Continuous wettability gradient"
             visual={<TestingVisual kind="gradient" />}
             paragraphs={[
-              "The poster proposes a gradient that transitions from hydrophilic at the top toward more hydrophobic behavior lower on the surface.",
-              "The reason is droplet pinning. A sudden wetting transition can slow or trap droplets, while a gradual transition may keep water moving in the intended direction.",
-              "This version should be tested against the alternating bands to see whether smoother wetting changes improve directional dust transport without sacrificing transparency."
+              "This option moves gradually from hydrophilic wetting into hydrophobic release instead of switching between hard bands.",
+              "The smoother transition is meant to reduce droplet pinning, where water slows down at a sharp surface boundary.",
+              "It is useful as a comparison to the equal-band design when tuning for smoother water movement across the panel."
             ]}
           />
 
@@ -357,20 +346,20 @@ export function PatternLabContent() {
             title="Concentric square transport paths"
             visual={<TestingVisual kind="rings" />}
             paragraphs={[
-              "The square-ring concept explores whether geometry can direct loosened dust outward instead of only downward.",
-              "Like the alternating pattern, the design still depends on combining hydrophilic wetting with hydrophobic droplet mobility. The difference is that the wetting transitions are organized around repeated perimeters.",
-              "This pattern is a useful comparison for future microtexture studies because it tests directional transport while keeping large transparent regions available for light transmission."
+              "Square paths test whether geometry can steer dirty water outward as well as downward.",
+              "The white squares are hydrophilic wetting zones. The dotted baby-blue squares are hydrophobic release paths, made more visible here so the alternating behavior is clear.",
+              "This layout keeps large transparent areas while adding repeated release paths around the surface."
             ]}
           />
 
           <PatternStudy
-            eyebrow="Next test"
-            title="Long-term energy output"
-            visual={<TestingVisual kind="asymmetric" />}
+            eyebrow="Flow variant"
+            title="Nested release channels"
+            visual={<TestingVisual kind="nested" />}
             paragraphs={[
-              "The current study measured cleaning performance through residual contamination, not long-term electrical output.",
-              "A future test would repeat dust deposition and water-cleaning cycles on real or instrumented PV panels, then measure voltage, current, and power after each cycle.",
-              "That would show whether the lower residue from the alternating surface is large enough to maintain higher light transmission and improve energy production over time."
+              "This variant keeps the square geometry but increases the number of visible hydrophobic paths.",
+              "Dotted baby-blue channels show where droplets should release and accelerate. Plain white zones show where water can spread before release.",
+              "It gives the same concept a more directional layout for surfaces that need stronger edge-to-edge transport."
             ]}
           />
         </div>
@@ -391,22 +380,25 @@ function PatternStudy({
   visual: ReactNode;
 }) {
   return (
-    <article className="grid gap-6 border-b border-white/10 pb-12 last:border-b-0">
+    <article className="grid gap-4 border-b border-white/10 pb-7 last:border-b-0">
       <div className="grid gap-2">
         <p className="m-0 text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
           {eyebrow}
         </p>
-        <h2 className="m-0 max-w-[60rem] text-3xl leading-none font-black text-white sm:text-5xl">
+        <h2 className="m-0 max-w-[58rem] text-2xl leading-[0.98] font-black text-white sm:text-4xl">
           {title}
         </h2>
       </div>
-      <div className="grid gap-7 lg:grid-cols-[360px_minmax(0,1fr)] lg:items-start">
+      <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start">
         <div className="transition-transform duration-500 hover:-translate-y-1">
           {visual}
         </div>
-        <div className="grid max-w-[54rem] gap-4 text-base leading-7 text-[#a7bbb8]">
+        <div className="grid max-w-[58rem] gap-3 text-sm leading-6 text-[#a7bbb8] xl:grid-cols-3">
           {paragraphs.map((paragraph) => (
-            <p className="m-0" key={paragraph}>
+            <p
+              className="m-0 border-t border-white/10 pt-3 xl:border-t-0 xl:border-l xl:pl-4 xl:pt-0"
+              key={paragraph}
+            >
               {paragraph}
             </p>
           ))}
@@ -420,18 +412,18 @@ function MiniStripeSurface() {
   return (
     <div
       aria-label="Alternating hydrophilic and hydrophobic PMMA pattern"
-      className="grid w-full max-w-[360px] gap-3"
+      className="grid w-full max-w-[300px] gap-3"
       role="img"
     >
-      <div className="h-[260px] overflow-hidden border border-white/15 bg-white/5">
+      <div className="h-[210px] overflow-hidden border border-white/15 bg-white/5">
         <div className="flex h-full flex-col">
           {Array.from({ length: 12 }).map((_, index) => (
             <span
               className={cx(
                 "min-h-2",
                 index % 2 === 0
-                  ? "flex-[1.2] bg-[linear-gradient(180deg,#f6fffd,#aeece4)]"
-                  : "flex-[0.76] bg-[radial-gradient(circle,rgba(255,255,255,0.72)_0_1.2px,transparent_1.9px),linear-gradient(180deg,#f4be62,#d08a30)] [background-size:8px_8px,auto]"
+                  ? "flex-1 bg-[linear-gradient(180deg,#ffffff,#eef9fb)]"
+                  : "flex-1 bg-[radial-gradient(circle,rgba(0,65,92,0.42)_0_1.15px,transparent_1.8px),linear-gradient(180deg,#d9f7ff,#9ee7ff)] [background-size:8px_8px,auto]"
               )}
               key={index}
             />
@@ -439,44 +431,64 @@ function MiniStripeSurface() {
         </div>
       </div>
       <div className="flex flex-wrap gap-2 text-xs font-black">
-        <span className="bg-[#aeece4] px-2.5 py-1.5 text-[#061116]">hydrophilic PMMA</span>
-        <span className="bg-[#d08a30] px-2.5 py-1.5 text-[#061116]">laser texture</span>
+        <span className="bg-white px-2.5 py-1.5 text-[#061116]">hydrophilic</span>
+        <span className="bg-[#9ee7ff] px-2.5 py-1.5 text-[#061116]">hydrophobic</span>
       </div>
     </div>
   );
 }
 
-function TestingVisual({ kind }: { kind: "gradient" | "rings" | "asymmetric" }) {
+function TestingVisual({ kind }: { kind: "gradient" | "rings" | "nested" }) {
   const ringClasses = [
-    "h-[82%] w-[82%]",
-    "h-[60%] w-[60%]",
-    "h-[38%] w-[38%]",
-    "h-[18%] w-[18%]"
+    { className: "h-[88%] w-[88%]", hydrophobic: true },
+    { className: "h-[66%] w-[66%]", hydrophobic: false },
+    { className: "h-[44%] w-[44%]", hydrophobic: true },
+    { className: "h-[22%] w-[22%]", hydrophobic: false }
+  ];
+  const nestedClasses = [
+    { className: "h-[92%] w-[92%]", hydrophobic: false },
+    { className: "h-[78%] w-[78%]", hydrophobic: true },
+    { className: "h-[62%] w-[62%]", hydrophobic: false },
+    { className: "h-[48%] w-[48%]", hydrophobic: true },
+    { className: "h-[32%] w-[32%]", hydrophobic: false },
+    { className: "h-[18%] w-[18%]", hydrophobic: true }
   ];
 
   return (
     <div
       className={cx(
-        "relative aspect-[1.35/1] w-full max-w-[360px] overflow-hidden border border-white/15",
+        "relative aspect-[1.35/1] w-full max-w-[300px] overflow-hidden border border-white/15",
         kind === "gradient" &&
-          "bg-[linear-gradient(180deg,#f6fffd_0_24%,#aeece4_48%,#d08a30_100%)]",
+          "bg-[linear-gradient(180deg,#ffffff_0_26%,#effcff_44%,#9ee7ff_100%)]",
         kind === "rings" &&
-          "grid place-items-center bg-[radial-gradient(circle,rgba(255,255,255,0.22)_0_1px,transparent_2px),#1a2a2d] [background-size:8px_8px]",
-        kind === "asymmetric" && "flex flex-col"
+          "grid place-items-center bg-[#ffffff]",
+        kind === "nested" && "grid place-items-center bg-[#ffffff]"
       )}
     >
       {kind === "rings" &&
-        ringClasses.map((className) => (
+        ringClasses.map((ring) => (
           <span
-            className={cx("absolute border-[10px] border-[#aeece4]/70", className)}
-            key={className}
+            className={cx(
+              "absolute",
+              ring.className,
+              ring.hydrophobic
+                ? "border-[14px] border-[#9ee7ff] bg-[radial-gradient(circle,rgba(0,65,92,0.42)_0_1.15px,transparent_1.85px)] [background-size:8px_8px]"
+                : "border-[14px] border-white bg-white shadow-[inset_0_0_0_1px_rgba(6,17,22,0.08)]"
+            )}
+            key={ring.className}
           />
         ))}
-      {kind === "asymmetric" &&
-        Array.from({ length: 9 }).map((_, index) => (
+      {kind === "nested" &&
+        nestedClasses.map((ring) => (
           <span
-            className={index % 2 === 0 ? "flex-[1.8] bg-[#aeece4]" : "flex-[0.62] bg-[#d08a30]"}
-            key={index}
+            className={cx(
+              "absolute",
+              ring.className,
+              ring.hydrophobic
+                ? "border-[10px] border-[#9ee7ff] bg-[radial-gradient(circle,rgba(0,65,92,0.45)_0_1.1px,transparent_1.8px)] [background-size:7px_7px]"
+                : "border-[10px] border-white bg-white shadow-[inset_0_0_0_1px_rgba(6,17,22,0.08)]"
+            )}
+            key={ring.className}
           />
         ))}
     </div>
