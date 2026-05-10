@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { OptimizerGlobeLoading } from "./_components/optimizer-loading-shell";
 import { PatternLabContent, ProductContent } from "./_components/project-pages";
 import {
   useCallback,
@@ -23,7 +24,7 @@ import worldMap from "world-atlas/countries-10m.json";
 
 type PageId = "optimizer" | "product" | "patterns";
 type RegionScope = "Country" | "U.S. State" | "Ocean / Sea";
-type GlobeMode = "world" | "us";
+type SelectableScope = "Country" | "U.S. State";
 type CategoryId =
   | "rainy-steep"
   | "humid-moderate"
@@ -82,6 +83,7 @@ type GlobeFocus = {
 type GlobePick = {
   coordinates: [number, number];
   geo: RegionFeature;
+  scope: SelectableScope;
 };
 
 type CoordinatePair = [number, number];
@@ -424,6 +426,17 @@ const legendColorClassByCategory: Record<CategoryId, string> = {
   "marine-humid": "bg-[#35a8d8]",
   "marine-arid": "bg-[#ce9340]",
   "polar-marine": "bg-[#9ad9ff]"
+};
+
+const legendRgbByCategory: Record<CategoryId, [number, number, number]> = {
+  "rainy-steep": [83, 217, 198],
+  "humid-moderate": [115, 210, 127],
+  temperate: [183, 204, 115],
+  "arid-dusty": [216, 163, 79],
+  "desert-flat": [199, 115, 56],
+  "marine-humid": [53, 168, 216],
+  "marine-arid": [206, 147, 64],
+  "polar-marine": [154, 217, 255]
 };
 
 const labelByCategory: Record<CategoryId, string> = {
@@ -910,6 +923,97 @@ function featureColorStyle(id: number) {
   return `rgb(${red}, ${green}, ${blue})`;
 }
 
+function projectToMapCanvas(
+  coordinate: CoordinatePair,
+  width: number,
+  height: number,
+  xOffset = 0
+): CoordinatePair {
+  const wrappedLongitude = (((coordinate[0] + 180) % 360) + 360) % 360;
+  return [
+    (wrappedLongitude / 360) * width + xOffset,
+    ((90 - clamp(coordinate[1], -90, 90)) / 180) * height
+  ];
+}
+
+function drawRingPath(
+  context: CanvasRenderingContext2D,
+  ring: LinearRingCoordinates,
+  width: number,
+  height: number,
+  xOffset: number
+) {
+  if (ring.length < 2) return;
+
+  const firstPoint = projectToMapCanvas(ring[0], width, height, xOffset);
+  context.moveTo(firstPoint[0], firstPoint[1]);
+
+  let previousX = firstPoint[0];
+  for (let index = 1; index < ring.length; index += 1) {
+    const nextPoint = projectToMapCanvas(ring[index], width, height, xOffset);
+    while (nextPoint[0] - previousX > width / 2) nextPoint[0] -= width;
+    while (nextPoint[0] - previousX < -width / 2) nextPoint[0] += width;
+    context.lineTo(nextPoint[0], nextPoint[1]);
+    previousX = nextPoint[0];
+  }
+
+  context.closePath();
+}
+
+function drawPolygonPath(
+  context: CanvasRenderingContext2D,
+  polygon: PolygonCoordinates,
+  width: number,
+  height: number
+) {
+  [-width, 0, width].forEach((xOffset) => {
+    polygon.forEach((ring) => {
+      drawRingPath(context, ring, width, height, xOffset);
+    });
+  });
+}
+
+function drawGeometryPath(
+  context: CanvasRenderingContext2D,
+  geometry: Geometry,
+  width: number,
+  height: number
+) {
+  if (geometry.type === "Polygon") {
+    drawPolygonPath(
+      context,
+      geometry.coordinates as PolygonCoordinates,
+      width,
+      height
+    );
+    return;
+  }
+
+  if (geometry.type === "MultiPolygon") {
+    (geometry.coordinates as PolygonCoordinates[]).forEach((polygon) => {
+      drawPolygonPath(context, polygon, width, height);
+    });
+    return;
+  }
+
+  if (geometry.type === "GeometryCollection") {
+    geometry.geometries.forEach((item) => {
+      drawGeometryPath(context, item, width, height);
+    });
+  }
+}
+
+function fillFeaturePath(
+  context: CanvasRenderingContext2D,
+  geometry: Geometry,
+  width: number,
+  height: number
+) {
+  context.beginPath();
+  drawGeometryPath(context, geometry, width, height);
+  context.fill("evenodd");
+}
+
 function createFeatureHitMap(features: RegionFeature[]): FeatureHitMap {
   const canvas = document.createElement("canvas");
   canvas.width = featureHitMapWidth;
@@ -925,14 +1029,10 @@ function createFeatureHitMap(features: RegionFeature[]): FeatureHitMap {
     };
   }
 
-  const projection = geoEquirectangular()
-    .translate([featureHitMapWidth / 2, featureHitMapHeight / 2])
-    .scale(featureHitMapWidth / (Math.PI * 2));
-  const path = geoPath(projection, context);
   const featuresByColor = new Map<number, RegionFeature>();
   const drawQueue = features
     .map((geo, index) => ({
-      area: path.area(geo),
+      area: geometryAreaDegrees(geo.geometry),
       colorId: featureColorId(index),
       geo
     }))
@@ -941,17 +1041,19 @@ function createFeatureHitMap(features: RegionFeature[]): FeatureHitMap {
   context.clearRect(0, 0, featureHitMapWidth, featureHitMapHeight);
   drawQueue.forEach(({ area, colorId, geo }) => {
     context.fillStyle = featureColorStyle(colorId);
-    context.beginPath();
-    path(geo);
-    context.fill("evenodd");
+    fillFeaturePath(context, geo.geometry, featureHitMapWidth, featureHitMapHeight);
 
-    if (area < tinyFeatureHitRadius * tinyFeatureHitRadius) {
-      const centroid = projection(geoCentroid(geo));
-      if (centroid) {
-        context.beginPath();
-        context.arc(centroid[0], centroid[1], tinyFeatureHitRadius, 0, Math.PI * 2);
-        context.fill();
-      }
+    const projectedArea =
+      (area * featureHitMapWidth * featureHitMapHeight) / (360 * 180);
+    if (projectedArea < tinyFeatureHitRadius * tinyFeatureHitRadius) {
+      const centroid = projectToMapCanvas(
+        coordinatesFromFeature(geo),
+        featureHitMapWidth,
+        featureHitMapHeight
+      );
+      context.beginPath();
+      context.arc(centroid[0], centroid[1], tinyFeatureHitRadius, 0, Math.PI * 2);
+      context.fill();
     }
 
     featuresByColor.set(colorId, geo);
@@ -1017,7 +1119,32 @@ function findFeatureAtPoint(
   );
 }
 
-function createBorderTexture({ mode }: { mode: GlobeMode }) {
+function findSelectableFeatureAtPoint(
+  stateHitMap: FeatureHitMap,
+  countryHitMap: FeatureHitMap,
+  longitude: number,
+  latitude: number
+) {
+  const stateGeo = findFeatureAtPoint(
+    stateHitMap,
+    stateFeatures,
+    longitude,
+    latitude
+  );
+  if (stateGeo) return { geo: stateGeo, scope: "U.S. State" as const };
+
+  const countryGeo = findFeatureAtPoint(
+    countryHitMap,
+    worldFeatures,
+    longitude,
+    latitude
+  );
+  if (countryGeo) return { geo: countryGeo, scope: "Country" as const };
+
+  return null;
+}
+
+function createBorderTexture() {
   const width = 8192;
   const height = 4096;
   const canvas = document.createElement("canvas");
@@ -1041,15 +1168,13 @@ function createBorderTexture({ mode }: { mode: GlobeMode }) {
     context.stroke();
   });
 
-  if (mode === "us") {
-    stateFeatures.forEach((geo) => {
-      context.beginPath();
-      path(geo);
-      context.strokeStyle = "rgba(0, 0, 0, 0.94)";
-      context.lineWidth = 3.6;
-      context.stroke();
-    });
-  }
+  stateFeatures.forEach((geo) => {
+    context.beginPath();
+    path(geo);
+    context.strokeStyle = "rgba(0, 0, 0, 0.82)";
+    context.lineWidth = 2.1;
+    context.stroke();
+  });
 
   context.clearRect(0, 0, borderTextureSeamGuardPixels, height);
   context.clearRect(
@@ -1062,10 +1187,107 @@ function createBorderTexture({ mode }: { mode: GlobeMode }) {
   return canvas;
 }
 
+function featureMatchesRegion(
+  geo: RegionFeature,
+  selectedRegion: RegionRecommendation,
+  scope: "Country" | "U.S. State"
+) {
+  const name = geo.properties?.name ?? "";
+  return selectedRegion.id === `${scope}-${geo.id ?? name}`;
+}
+
+function selectedFeatureForRegion(
+  selectedRegion: RegionRecommendation | null
+) {
+  if (!selectedRegion) return null;
+  const selectedScope = selectedRegion.scope;
+  if (selectedScope === "Ocean / Sea") return null;
+
+  const features =
+    selectedScope === "U.S. State" ? stateFeatures : worldFeatures;
+  return (
+    features.find((geo) =>
+      featureMatchesRegion(geo, selectedRegion, selectedScope)
+    ) ?? null
+  );
+}
+
+function marineHighlightRadius(selectedRegion: RegionRecommendation) {
+  if (selectedRegion.name.includes("Ocean")) return 170;
+  if (selectedRegion.name.includes("Gulf")) return 92;
+  return 108;
+}
+
+function categoryHighlightColor(category: CategoryId, opacity: number) {
+  const [red, green, blue] = legendRgbByCategory[category];
+  return `rgba(${red}, ${green}, ${blue}, ${opacity})`;
+}
+
+function drawMarineHighlight(
+  context: CanvasRenderingContext2D,
+  selectedRegion: RegionRecommendation,
+  width: number,
+  height: number
+) {
+  const [centerX, centerY] = projectToMapCanvas(
+    [selectedRegion.longitude, selectedRegion.latitude],
+    width,
+    height
+  );
+  const radius = marineHighlightRadius(selectedRegion);
+
+  [-width, 0, width].forEach((xOffset) => {
+    const x = centerX + xOffset;
+    const gradient = context.createRadialGradient(
+      x,
+      centerY,
+      0,
+      x,
+      centerY,
+      radius
+    );
+    gradient.addColorStop(0, categoryHighlightColor(selectedRegion.category, 0.3));
+    gradient.addColorStop(0.48, categoryHighlightColor(selectedRegion.category, 0.16));
+    gradient.addColorStop(1, categoryHighlightColor(selectedRegion.category, 0));
+
+    context.fillStyle = gradient;
+    context.beginPath();
+    context.arc(x, centerY, radius, 0, Math.PI * 2);
+    context.fill();
+  });
+}
+
+function createSelectedHighlightTexture(
+  selectedRegion: RegionRecommendation | null
+) {
+  const width = featureHitMapWidth;
+  const height = featureHitMapHeight;
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const context = canvas.getContext("2d");
+  if (!context) return canvas;
+
+  if (selectedRegion?.scope === "Ocean / Sea") {
+    drawMarineHighlight(context, selectedRegion, width, height);
+    return canvas;
+  }
+
+  if (!selectedRegion) return canvas;
+
+  const selectedFeature = selectedFeatureForRegion(selectedRegion);
+  if (!selectedFeature) return canvas;
+
+  context.fillStyle = categoryHighlightColor(selectedRegion.category, 0.34);
+  fillFeaturePath(context, selectedFeature.geometry, width, height);
+
+  return canvas;
+}
+
 export default function Home() {
   const pathname = usePathname();
   const activePage = pageFromPathname(pathname);
-  const [mapMode, setMapMode] = useState<GlobeMode>("world");
   const [hoveredRegion, setHoveredRegion] = useState<HoveredRegion>({
     name: "World view"
   });
@@ -1081,33 +1303,17 @@ export default function Home() {
   const selectGeo = useCallback(
     (
       geo: RegionFeature,
-      scope: "Country" | "U.S. State",
+      scope: SelectableScope,
       coordinates?: [number, number]
     ) => {
-      const name = geo.properties?.name ?? "";
-
-      if (scope === "Country" && name.includes("United States")) {
-        setMapMode("us");
-        setSelectedRegion(null);
-        setHoveredRegion({ name: "Select a U.S. state" });
-        return;
-      }
-
       setSelectedRegion(recommendationFromGeo(geo, scope, coordinates));
     },
     []
   );
 
   const selectMarine = useCallback((zone: MarineZone) => {
-    setMapMode("world");
     setSelectedRegion(recommendationFromMarine(zone));
     setHoveredRegion({ coordinates: zone.coordinates, name: zone.name });
-  }, []);
-
-  const returnToWorld = useCallback(() => {
-    setMapMode("world");
-    setSelectedRegion(null);
-    setHoveredRegion({ name: "World view" });
   }, []);
 
   return (
@@ -1122,10 +1328,8 @@ export default function Home() {
       {activePage === "optimizer" && (
         <OptimizerPanel
           hoveredRegion={hoveredRegion}
-          mapMode={mapMode}
           onHover={setHoveredRegion}
           onMarineSelect={selectMarine}
-          onWorldView={returnToWorld}
           onSelect={selectGeo}
           selectedProfile={selectedProfile}
           selectedRegion={selectedRegion}
@@ -1188,27 +1392,33 @@ function Header({
 
 function OptimizerPanel({
   hoveredRegion,
-  mapMode,
   onHover,
   onMarineSelect,
-  onWorldView,
   onSelect,
   selectedProfile,
   selectedRegion
 }: {
   hoveredRegion: HoveredRegion;
-  mapMode: GlobeMode;
   onHover: (region: HoveredRegion) => void;
   onMarineSelect: (zone: MarineZone) => void;
-  onWorldView: () => void;
   onSelect: (
     geo: RegionFeature,
-    scope: "Country" | "U.S. State",
+    scope: SelectableScope,
     coordinates?: [number, number]
   ) => void;
   selectedProfile: (typeof categoryProfiles)[CategoryId] | null;
   selectedRegion: RegionRecommendation | null;
 }) {
+  const [shouldMountGlobe, setShouldMountGlobe] = useState(false);
+
+  useEffect(() => {
+    const frameId = window.requestAnimationFrame(() => {
+      setShouldMountGlobe(true);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, []);
+
   return (
     <section className="relative isolate min-h-[calc(100svh-72px)] overflow-hidden bg-[linear-gradient(180deg,#08191e_0%,#061116_46%,#041014_100%)] lg:h-[calc(100svh-72px)]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-30" />
@@ -1227,26 +1437,8 @@ function OptimizerPanel({
             </div>
 
             <p className="m-0 max-w-[17rem] text-sm leading-6 text-[#a7bbb8]">
-              Hover pauses the globe. Click land to tune the surface.
+              Hover pauses the globe. Click a country or U.S. state to tune the surface.
             </p>
-
-            {mapMode === "us" && (
-              <div className="grid gap-2 border-y border-white/10 py-4">
-                <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
-                  U.S. states
-                </span>
-                <p className="m-0 text-sm leading-6 text-[#a7bbb8]">
-                  Select a state, or return to the world map.
-                </p>
-                <button
-                  className="cursor-pointer border border-white/10 px-3 py-2 text-left text-xs font-black text-[#dbe9e6] transition-all duration-300 hover:border-[#47e4d0]/70 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]"
-                  onClick={onWorldView}
-                  type="button"
-                >
-                  Back to world
-                </button>
-              </div>
-            )}
 
             <div className="grid gap-2">
               <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
@@ -1305,13 +1497,16 @@ function OptimizerPanel({
         </aside>
 
         <div className="relative order-1 min-h-[66svh] lg:order-2 lg:min-h-0">
-          <InteractiveGlobe
-            mode={mapMode}
-            onHover={onHover}
-            onMarineSelect={onMarineSelect}
-            onSelect={onSelect}
-            selectedRegion={selectedRegion}
-          />
+          {shouldMountGlobe ? (
+            <InteractiveGlobe
+              onHover={onHover}
+              onMarineSelect={onMarineSelect}
+              onSelect={onSelect}
+              selectedRegion={selectedRegion}
+            />
+          ) : (
+            <OptimizerGlobeLoading />
+          )}
           {selectedRegion && <MainDesignPreview selectedRegion={selectedRegion} />}
         </div>
 
@@ -1329,18 +1524,16 @@ function OptimizerPanel({
 }
 
 function InteractiveGlobe({
-  mode,
   onHover,
   onMarineSelect,
   onSelect,
   selectedRegion
 }: {
-  mode: GlobeMode;
   onHover: (region: HoveredRegion) => void;
   onMarineSelect: (zone: MarineZone) => void;
   onSelect: (
     geo: RegionFeature,
-    scope: "Country" | "U.S. State",
+    scope: SelectableScope,
     coordinates?: [number, number]
   ) => void;
   selectedRegion: RegionRecommendation | null;
@@ -1348,6 +1541,7 @@ function InteractiveGlobe({
   const containerRef = useRef<HTMLDivElement | null>(null);
   const callbacksRef = useRef({ onHover, onMarineSelect, onSelect });
   const focusRef = useRef<GlobeFocus | null>(null);
+  const highlightMaterialRef = useRef<THREE.MeshBasicMaterial | null>(null);
   const [isGlobeReady, setIsGlobeReady] = useState(false);
 
   useEffect(() => {
@@ -1355,12 +1549,24 @@ function InteractiveGlobe({
   }, [onHover, onMarineSelect, onSelect]);
 
   useEffect(() => {
-    focusRef.current = selectedRegion && selectedRegion.scope !== "Ocean / Sea"
+    focusRef.current = selectedRegion
       ? {
           longitude: selectedRegion.longitude,
           latitude: selectedRegion.latitude
         }
       : null;
+
+    const material = highlightMaterialRef.current;
+    if (!material) return;
+
+    const currentTexture = material.map;
+    const texture = new THREE.CanvasTexture(
+      createSelectedHighlightTexture(selectedRegion)
+    );
+    configureBorderTexture(texture, 4);
+    material.map = texture;
+    material.needsUpdate = true;
+    currentTexture?.dispose();
   }, [selectedRegion]);
 
   useEffect(() => {
@@ -1368,9 +1574,8 @@ function InteractiveGlobe({
     if (!container) return;
     setIsGlobeReady(false);
 
-    const activeFeatures = mode === "world" ? worldFeatures : stateFeatures;
-    const featureHitMap = createFeatureHitMap(activeFeatures);
-    const scope = mode === "world" ? "Country" : "U.S. State";
+    const stateHitMap = createFeatureHitMap(stateFeatures);
+    const countryHitMap = createFeatureHitMap(worldFeatures);
     const renderer = new THREE.WebGLRenderer({
       alpha: true,
       antialias: true,
@@ -1416,7 +1621,7 @@ function InteractiveGlobe({
     waterTexture.anisotropy = maxAnisotropy;
 
     const borderTexture = new THREE.CanvasTexture(
-      createBorderTexture({ mode })
+      createBorderTexture()
     );
     configureBorderTexture(borderTexture, maxAnisotropy);
 
@@ -1472,6 +1677,24 @@ function InteractiveGlobe({
 
     // Keep first render fast; only attempt the 16K swap after the globe is interactive.
     ultraTextureTimer = window.setTimeout(loadUltraEarthTexture, 1400);
+
+    const highlightTexture = new THREE.CanvasTexture(
+      createSelectedHighlightTexture(null)
+    );
+    configureBorderTexture(highlightTexture, maxAnisotropy);
+    const highlightMaterial = new THREE.MeshBasicMaterial({
+      depthWrite: false,
+      map: highlightTexture,
+      polygonOffset: true,
+      polygonOffsetFactor: -2,
+      transparent: true
+    });
+    highlightMaterialRef.current = highlightMaterial;
+    const selectedHighlight = new THREE.Mesh(
+      new THREE.SphereGeometry(2.506, 192, 128),
+      highlightMaterial
+    );
+    group.add(selectedHighlight);
 
     const borderMaterial = new THREE.MeshBasicMaterial({
       depthWrite: false,
@@ -1595,17 +1818,18 @@ function InteractiveGlobe({
       const localPoint = globe.worldToLocal(globeHit.point.clone()).normalize();
       const longitude = THREE.MathUtils.radToDeg(Math.atan2(-localPoint.z, localPoint.x));
       const latitude = THREE.MathUtils.radToDeg(Math.asin(localPoint.y));
-      const geo = findFeatureAtPoint(
-        featureHitMap,
-        activeFeatures,
+      const target = findSelectableFeatureAtPoint(
+        stateHitMap,
+        countryHitMap,
         longitude,
         latitude
       );
 
-      return geo
+      return target
         ? {
             coordinates: [longitude, latitude] as [number, number],
-            geo
+            geo: target.geo,
+            scope: target.scope
           }
         : null;
     };
@@ -1651,6 +1875,8 @@ function InteractiveGlobe({
           coordinates: pick.coordinates,
           name: pick.geo.properties?.name ?? "Selected region"
         });
+      } else {
+        callbacksRef.current.onHover({ name: "World view" });
       }
     };
 
@@ -1699,7 +1925,11 @@ function InteractiveGlobe({
       const clickPick = dragState.moved ? null : dragState.downPick;
       dragState.downPick = null;
       if (clickPick?.geo) {
-        callbacksRef.current.onSelect(clickPick.geo, scope, clickPick.coordinates);
+        callbacksRef.current.onSelect(
+          clickPick.geo,
+          clickPick.scope,
+          clickPick.coordinates
+        );
       }
     };
 
@@ -1792,6 +2022,9 @@ function InteractiveGlobe({
       managedEarthTextures.forEach((texture) => texture.dispose());
       bumpTexture.dispose();
       waterTexture.dispose();
+      selectedHighlight.geometry.dispose();
+      highlightMaterial.map?.dispose();
+      highlightMaterial.dispose();
       borders.geometry.dispose();
       borderMaterial.map?.dispose();
       borderMaterial.dispose();
@@ -1802,9 +2035,10 @@ function InteractiveGlobe({
       (atmosphere.material as THREE.Material).dispose();
       starGeometry.dispose();
       (stars.material as THREE.Material).dispose();
+      highlightMaterialRef.current = null;
       container.removeChild(renderer.domElement);
     };
-  }, [mode]);
+  }, []);
 
   return (
     <div className="relative h-full min-h-[66svh] overflow-hidden lg:min-h-[calc(100svh-72px)]">
