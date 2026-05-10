@@ -426,8 +426,8 @@ const labelByCategory: Record<CategoryId, string> = {
 
 const worldFeatures = atlasFeatures(worldMap, "countries");
 const stateFeatures = atlasFeatures(usMap, "states");
-const earthTextureUrl =
-  "/textures/earth-8192.jpg";
+const basePath = process.env.NEXT_PUBLIC_BASE_PATH ?? "";
+const earthTextureUrl = `${basePath}/textures/earth-8192.jpg`;
 const earthBumpTextureUrl =
   "https://unpkg.com/three-globe/example/img/earth-topology.png";
 const earthWaterTextureUrl =
