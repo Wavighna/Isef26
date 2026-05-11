@@ -1311,6 +1311,11 @@ export default function Home() {
     setHoveredRegion({ coordinates: zone.coordinates, name: zone.name });
   }, []);
 
+  const clearSelection = useCallback(() => {
+    setSelectedRegion(null);
+    setHoveredRegion({ name: "World view" });
+  }, []);
+
   return (
     <main
       className={cx(
@@ -1326,6 +1331,7 @@ export default function Home() {
           onHover={setHoveredRegion}
           onMarineSelect={selectMarine}
           onSelect={selectGeo}
+          onSelectionClear={clearSelection}
           selectedProfile={selectedProfile}
           selectedRegion={selectedRegion}
         />
@@ -1352,25 +1358,25 @@ function Header({
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-white/10 bg-[#061116]/90 backdrop-blur-xl">
-      <nav className="flex flex-col gap-3 px-4 py-3 sm:h-[72px] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+      <nav className="flex flex-col items-center gap-3 px-4 py-3 sm:h-[72px] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
         <Link
-          className="group grid gap-0.5 text-left"
+          className="group grid gap-0.5 text-center sm:text-left"
           href="/product"
         >
-          <span className="text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase transition-colors group-hover:text-[#f0c86b]">
+          <span className="text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase transition-colors group-hover:text-[#f0c86b] sm:text-[0.68rem] sm:tracking-[0.24em]">
             Solstice Surface Systems
           </span>
-          <strong className="text-[0.95rem] font-semibold text-white">
+          <strong className="text-[0.86rem] font-semibold text-white sm:text-[0.95rem]">
             Retrofit solar cleaning overlays
           </strong>
         </Link>
 
-        <div className="flex gap-1 overflow-x-auto border border-white/10 bg-white/[0.03] p-1">
+        <div className="inline-flex max-w-full self-center gap-1 overflow-hidden border border-white/10 bg-white/[0.03] p-1 sm:flex sm:w-auto sm:self-auto sm:overflow-x-auto">
           {pages.map((page) => (
             <Link
               aria-current={activePage === page.id ? "page" : undefined}
               className={cx(
-                "cursor-pointer px-3.5 py-2 text-xs font-black tracking-normal whitespace-nowrap text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]",
+                "shrink-0 cursor-pointer px-2.5 py-2 text-center text-[0.64rem] font-black tracking-normal whitespace-nowrap text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0] sm:px-3.5 sm:text-xs",
                 activePage === page.id && "bg-white text-[#061116] shadow-[0_0_30px_rgba(71,228,208,0.18)]"
               )}
               href={page.href}
@@ -1390,6 +1396,7 @@ function OptimizerPanel({
   onHover,
   onMarineSelect,
   onSelect,
+  onSelectionClear,
   selectedProfile,
   selectedRegion
 }: {
@@ -1401,6 +1408,7 @@ function OptimizerPanel({
     scope: SelectableScope,
     coordinates?: [number, number]
   ) => void;
+  onSelectionClear: () => void;
   selectedProfile: (typeof categoryProfiles)[CategoryId] | null;
   selectedRegion: RegionRecommendation | null;
 }) {
@@ -1415,37 +1423,37 @@ function OptimizerPanel({
   }, []);
 
   return (
-    <section className="relative isolate min-h-[calc(100svh-72px)] overflow-hidden bg-[linear-gradient(180deg,#08191e_0%,#061116_46%,#041014_100%)] lg:h-[calc(100svh-72px)]">
+    <section className="relative isolate overflow-hidden bg-[linear-gradient(180deg,#08191e_0%,#061116_46%,#041014_100%)] lg:h-[calc(100svh-72px)] lg:min-h-[calc(100svh-72px)]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-30" />
       <div
         className={cx(
-          "relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:h-[calc(100svh-72px)]",
+          "relative grid grid-cols-1 lg:h-[calc(100svh-72px)] lg:min-h-[calc(100svh-72px)]",
           selectedRegion
             ? "lg:grid-cols-[320px_minmax(0,1fr)_360px]"
             : "lg:grid-cols-[320px_minmax(0,1fr)]"
         )}
       >
-        <aside className="z-10 order-2 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:order-1 lg:overflow-y-auto lg:border-t-0 lg:border-r [&::-webkit-scrollbar]:hidden">
-          <div className="grid gap-5">
+        <aside className="z-10 order-1 overflow-x-hidden border-b border-white/10 bg-[#07161b]/90 p-4 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-r lg:border-b-0 lg:p-5 [&::-webkit-scrollbar]:hidden">
+          <div className="grid gap-4 lg:gap-5">
             <div>
-              <p className="mb-3 text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
+              <p className="mb-3 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.24em]">
                 Optimizer surface
               </p>
-              <h1 className="m-0 max-w-full text-[2.65rem] leading-[0.95] font-black tracking-normal break-words text-white 2xl:text-[2.85rem]">
+              <h1 className="m-0 max-w-full text-[1.9rem] leading-[0.98] font-black tracking-normal break-words text-white lg:text-[2.65rem] lg:leading-[0.95] 2xl:text-[2.85rem]">
                 Surface optimizer.
               </h1>
             </div>
 
-            <p className="m-0 max-w-[17rem] text-sm leading-6 text-[#a7bbb8]">
+            <p className="m-0 max-w-[22rem] text-[0.86rem] leading-6 text-[#a7bbb8] sm:text-sm lg:max-w-[17rem]">
               Hover pauses the globe. Click a country or U.S. state to tune the surface.
             </p>
 
             <div className="grid gap-2">
-              <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+              <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
                 Oceans and seas
               </span>
               <select
-                className="w-full cursor-pointer border border-white/10 bg-[#07161b] px-3 py-3 text-sm font-bold text-[#dbe9e6] outline-none transition-colors duration-300 hover:border-[#47e4d0]/70 focus:border-[#47e4d0]"
+                className="w-full cursor-pointer border border-white/10 bg-[#07161b] px-3 py-2.5 text-[0.86rem] font-bold text-[#dbe9e6] outline-none transition-colors duration-300 hover:border-[#47e4d0]/70 focus:border-[#47e4d0] sm:py-3 sm:text-sm"
                 onChange={(event) => {
                   const zone = marineZones.find((item) => item.id === event.target.value);
                   if (zone) onMarineSelect(zone);
@@ -1463,23 +1471,23 @@ function OptimizerPanel({
 
             <div className="grid gap-3 border-y border-white/10 py-4">
               <div className="flex items-center justify-between gap-4">
-                <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
-                  Hover target
-                </span>
+                  <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
+                    Hover target
+                  </span>
                 {hoveredRegion.coordinates && (
-                  <span className="text-xs font-semibold text-[#f0c86b]">
+                  <span className="text-[0.68rem] font-semibold text-[#f0c86b] sm:text-xs">
                     {hoveredRegion.coordinates[1].toFixed(1)} / {hoveredRegion.coordinates[0].toFixed(1)}
                   </span>
                 )}
               </div>
-              <strong className="text-lg leading-tight text-white">{hoveredRegion.name}</strong>
+              <strong className="text-base leading-tight text-white sm:text-lg">{hoveredRegion.name}</strong>
             </div>
 
             <ColorLegend selectedCategory={selectedRegion?.category ?? null} />
           </div>
         </aside>
 
-        <div className="relative order-1 min-h-[66svh] lg:order-2 lg:min-h-0">
+        <div className="relative order-2 min-h-[54svh] border-b border-white/10 lg:min-h-0 lg:border-b-0">
           {shouldMountGlobe ? (
             <InteractiveGlobe
               onHover={onHover}
@@ -1495,6 +1503,7 @@ function OptimizerPanel({
         {selectedRegion && (
           <div className="z-20 order-3 lg:relative lg:w-auto">
             <RegionInspector
+              onBack={onSelectionClear}
               profile={selectedProfile}
               selectedRegion={selectedRegion}
             />
@@ -1950,6 +1959,9 @@ function InteractiveGlobe({
 
     const animate = () => {
       const focus = focusRef.current;
+      const isMobileGlobe = container.clientWidth < 640;
+      const focusedCameraZ = isMobileGlobe ? 5.7 : 5.9;
+      const idleCameraZ = isMobileGlobe ? 7.55 : 8.25;
 
       if (focus) {
         targetRotation.x = THREE.MathUtils.degToRad(
@@ -1959,13 +1971,13 @@ function InteractiveGlobe({
           THREE.MathUtils.degToRad(-90 - focus.longitude),
           currentRotation.y
         );
-        camera.position.z += (5.9 - camera.position.z) * 0.05;
+        camera.position.z += (focusedCameraZ - camera.position.z) * 0.05;
       } else {
         if (!pointerInside && !userHasDragged) {
           targetRotation.x += (0.08 - targetRotation.x) * 0.018;
           targetRotation.y += 0.0016;
         }
-        camera.position.z += (8.25 - camera.position.z) * 0.04;
+        camera.position.z += (idleCameraZ - camera.position.z) * 0.04;
       }
 
       const rotationEase = focus ? 0.075 : 0.06;
@@ -2023,7 +2035,7 @@ function InteractiveGlobe({
   }, []);
 
   return (
-    <div className="relative h-full min-h-[66svh] overflow-hidden lg:min-h-[calc(100svh-72px)]">
+    <div className="relative h-full min-h-[54svh] overflow-hidden lg:min-h-[calc(100svh-72px)]">
       <div
         ref={containerRef}
         data-testid="three-globe"
@@ -2035,7 +2047,7 @@ function InteractiveGlobe({
         <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center bg-[#061116]/62 backdrop-blur-sm">
           <div className="grid place-items-center gap-3">
             <span className="h-12 w-12 rounded-full border-2 border-[#47e4d0]/20 border-t-[#47e4d0] animate-spin" />
-            <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#47e4d0] uppercase">
+            <span className="text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
               Loading globe
             </span>
           </div>
@@ -2047,9 +2059,11 @@ function InteractiveGlobe({
 }
 
 function RegionInspector({
+  onBack,
   profile,
   selectedRegion
 }: {
+  onBack: () => void;
   profile: (typeof categoryProfiles)[CategoryId] | null;
   selectedRegion: RegionRecommendation | null;
 }) {
@@ -2058,21 +2072,28 @@ function RegionInspector({
   }
 
   return (
-    <aside className="z-10 order-3 h-full overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-t-0 lg:border-l [&::-webkit-scrollbar]:hidden">
-      <div className="grid gap-6">
+    <aside className="z-10 order-3 h-full overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-4 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-t-0 lg:border-l lg:p-5 [&::-webkit-scrollbar]:hidden">
+      <div className="grid gap-5 lg:gap-6">
         <div className="grid gap-3">
           <div className="flex items-start justify-between gap-4">
-            <p className="m-0 text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
+            <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.24em]">
               Selected surface
             </p>
-            <span className="border border-white/10 bg-white/[0.04] px-2.5 py-1 text-xs font-black text-[#f0c86b]">
+            <span className="border border-white/10 bg-white/[0.04] px-2 py-1 text-[0.66rem] font-black text-[#f0c86b] sm:px-2.5 sm:text-xs">
               {selectedRegion.scope}
             </span>
           </div>
-          <h2 className="m-0 text-5xl leading-[0.92] font-black text-white">
+          <h2 className="m-0 text-[2rem] leading-[0.95] font-black text-white lg:text-5xl lg:leading-[0.92]">
             {selectedRegion.name}
           </h2>
-          <p className="m-0 text-sm leading-6 text-[#a7bbb8]">{selectedRegion.note}</p>
+          <p className="m-0 text-[0.86rem] leading-6 text-[#a7bbb8] sm:text-sm">{selectedRegion.note}</p>
+          <button
+            className="mt-1 w-fit cursor-pointer border border-white/15 px-2.5 py-2 text-[0.68rem] font-black tracking-normal text-[#dbe9e6] transition-all duration-300 hover:border-[#47e4d0]/70 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0] sm:px-3 sm:text-xs"
+            onClick={onBack}
+            type="button"
+          >
+            &lt;- Back to globe
+          </button>
         </div>
 
         <div className="grid grid-cols-2 border border-white/10">
@@ -2085,14 +2106,14 @@ function RegionInspector({
         <div className="grid gap-3">
           <div className="flex items-end justify-between gap-4">
             <div>
-              <p className="m-0 text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+              <p className="m-0 text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
                 Coating mix
               </p>
-              <strong className="text-2xl text-white">
+              <strong className="text-xl text-white sm:text-2xl">
                 {selectedRegion.hydrophilic}% / {selectedRegion.hydrophobic}%
               </strong>
             </div>
-            <span className="text-sm font-semibold text-[#f0c86b]">
+            <span className="text-xs font-semibold text-[#f0c86b] sm:text-sm">
               {selectedRegion.stripCount} bands
             </span>
           </div>
@@ -2114,33 +2135,33 @@ function ColorLegend({ selectedCategory }: { selectedCategory: CategoryId | null
   return (
     <div className="grid gap-3">
       <div className="flex items-center justify-between gap-4">
-        <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+        <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
           Color legend
         </span>
         {selectedCategory && (
-          <span className="text-xs font-black text-[#f0c86b]">
+          <span className="text-[0.68rem] font-black text-[#f0c86b] sm:text-xs">
             {labelByCategory[selectedCategory]}
           </span>
         )}
       </div>
-      <div className="grid gap-2">
+      <div className="grid grid-cols-2 gap-2 lg:grid-cols-1">
         {Object.entries(labelByCategory).map(([category, label]) => {
           const categoryId = category as CategoryId;
 
           return (
             <div
               className={cx(
-                "flex min-w-0 items-center justify-between gap-3 border border-white/10 bg-white/[0.025] px-2.5 py-2 transition-colors duration-300",
+                "flex min-w-0 flex-col items-start justify-between gap-2 border border-white/10 bg-white/[0.025] px-2.5 py-2 transition-colors duration-300 sm:flex-row sm:items-center lg:flex-row",
                 selectedCategory === categoryId && "border-[#f0c86b]/70 bg-white/[0.07]"
               )}
               key={category}
             >
-              <span className="min-w-0 text-xs leading-tight font-bold text-[#b5c8c5]">
+              <span className="min-w-0 text-[0.68rem] leading-tight font-bold text-[#b5c8c5] sm:text-xs">
                 {label}
               </span>
               <span
                 className={cx(
-                  "h-2.5 w-14 shrink-0",
+                  "h-2.5 w-full shrink-0 sm:w-14 lg:w-14",
                   legendColorClassByCategory[categoryId]
                 )}
               />
@@ -2167,20 +2188,20 @@ function MainDesignPreview({
     <div className="w-full border border-white/12 bg-[#061116]/72 p-3 shadow-[0_18px_58px_rgba(0,0,0,0.24)]">
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
-          <p className="m-0 text-[0.64rem] font-black tracking-[0.22em] text-[#47e4d0] uppercase">
+          <p className="m-0 text-[0.56rem] font-black tracking-[0.18em] text-[#47e4d0] uppercase sm:text-[0.64rem] sm:tracking-[0.22em]">
             Main design
           </p>
-          <strong className="text-lg leading-tight text-white">
+          <strong className="text-base leading-tight text-white sm:text-lg">
             {selectedRegion.name}
           </strong>
         </div>
-        <span className="text-xs font-black text-[#dbe9e6]">
+        <span className="text-[0.68rem] font-black text-[#dbe9e6] sm:text-xs">
           {selectedRegion.hydrophilic}/{selectedRegion.hydrophobic}
         </span>
       </div>
       <div
         aria-label={`${selectedRegion.hydrophilic}% hydrophilic and ${selectedRegion.hydrophobic}% hydrophobic coating pattern`}
-        className="h-40 overflow-hidden border border-white/15 bg-white/5"
+        className="h-32 overflow-hidden border border-white/15 bg-white/5 lg:h-40"
         role="img"
       >
         <div className="flex h-full flex-col">
@@ -2202,9 +2223,9 @@ function MainDesignPreview({
           ))}
         </div>
       </div>
-      <div className="mt-2 flex flex-wrap gap-2 text-[0.65rem] font-black uppercase tracking-[0.12em]">
-        <span className="bg-white px-2 py-1 text-[#061116]">hydrophilic</span>
-        <span className="bg-[#9ee7ff] px-2 py-1 text-[#061116]">hydrophobic</span>
+      <div className="mt-2 flex flex-wrap gap-2 text-[0.56rem] font-black tracking-[0.08em] uppercase sm:text-[0.65rem] sm:tracking-[0.12em]">
+        <span className="bg-white px-1.5 py-1 text-[#061116] sm:px-2">hydrophilic</span>
+        <span className="bg-[#9ee7ff] px-1.5 py-1 text-[#061116] sm:px-2">hydrophobic</span>
       </div>
     </div>
   );
@@ -2212,11 +2233,11 @@ function MainDesignPreview({
 
 function DataTile({ label, value }: { label: string; value: string }) {
   return (
-    <div className="grid min-h-24 content-between gap-3 border-r border-b border-white/10 p-3 last:border-r-0">
-      <span className="text-[0.68rem] font-black tracking-[0.18em] text-[#708b88] uppercase">
+    <div className="grid min-h-20 content-between gap-3 border-r border-b border-white/10 p-3 last:border-r-0 lg:min-h-24">
+      <span className="text-[0.56rem] font-black tracking-[0.14em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.18em]">
         {label}
       </span>
-      <strong className="text-base leading-tight text-white">{value}</strong>
+      <strong className="text-[0.82rem] leading-tight text-white sm:text-sm lg:text-base">{value}</strong>
     </div>
   );
 }
@@ -2224,10 +2245,10 @@ function DataTile({ label, value }: { label: string; value: string }) {
 function StatLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1">
-      <span className="text-[0.68rem] font-black tracking-[0.2em] text-[#708b88] uppercase">
+      <span className="text-[0.56rem] font-black tracking-[0.16em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.2em]">
         {label}
       </span>
-      <strong className="text-sm leading-5 text-[#dbe9e6]">{value}</strong>
+      <strong className="text-[0.86rem] leading-5 text-[#dbe9e6] sm:text-sm">{value}</strong>
     </div>
   );
 }

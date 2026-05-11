@@ -23,22 +23,22 @@ export function ProjectPageShell({
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#061116] text-[#e9fbf7]">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#061116]/90 backdrop-blur-xl">
-        <nav className="flex flex-col gap-3 px-4 py-3 sm:h-[72px] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
-          <Link className="group grid gap-0.5 text-left" href="/product">
-            <span className="text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase transition-colors group-hover:text-[#f0c86b]">
+        <nav className="flex flex-col items-center gap-3 px-4 py-3 sm:h-[72px] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+          <Link className="group grid gap-0.5 text-center sm:text-left" href="/product">
+            <span className="text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase transition-colors group-hover:text-[#f0c86b] sm:text-[0.68rem] sm:tracking-[0.24em]">
               Solstice Surface Systems
             </span>
-            <strong className="text-[0.95rem] font-semibold text-white">
+            <strong className="text-[0.86rem] font-semibold text-white sm:text-[0.95rem]">
               Retrofit solar cleaning overlays
             </strong>
           </Link>
 
-          <div className="flex gap-1 overflow-x-auto border border-white/10 bg-white/[0.03] p-1">
+          <div className="inline-flex max-w-full self-center gap-1 overflow-hidden border border-white/10 bg-white/[0.03] p-1 sm:flex sm:w-auto sm:self-auto sm:overflow-x-auto">
             {navItems.map((item) => (
               <Link
                 aria-current={activePage === item.id ? "page" : undefined}
                 className={cx(
-                  "px-3.5 py-2 text-xs font-black tracking-normal whitespace-nowrap text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]",
+                  "shrink-0 px-2.5 py-2 text-center text-[0.64rem] font-black tracking-normal whitespace-nowrap text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0] sm:px-3.5 sm:text-xs",
                   activePage === item.id &&
                     "bg-white text-[#061116] shadow-[0_0_30px_rgba(71,228,208,0.18)]"
                 )}
@@ -76,17 +76,17 @@ export function ProductContent() {
   return (
     <section className="bg-[#061116]">
       <div className="relative isolate min-h-[calc(100svh-72px)] overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_42%,rgba(71,228,208,0.2),transparent_34%),linear-gradient(115deg,#07161b_0%,#061116_54%,#0e1d1c_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,#07161b_0%,#061116_52%,#061116_100%)]" />
         <div className="relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:grid-cols-[minmax(0,0.86fr)_minmax(0,1fr)]">
-          <div className="grid content-center gap-10 px-5 py-16 sm:px-8 lg:px-12">
-            <div className="grid max-w-[50rem] gap-6">
-              <p className="m-0 text-[0.68rem] font-black tracking-[0.28em] text-[#47e4d0] uppercase">
+          <div className="grid min-w-0 content-center gap-8 px-5 py-12 sm:px-8 lg:gap-10 lg:px-12 lg:py-16">
+            <div className="grid max-w-[50rem] min-w-0 gap-6">
+              <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
                 Chemical-free PV cleaning surface
               </p>
-              <h1 className="m-0 text-[clamp(3.45rem,7.6vw,7.8rem)] leading-[0.86] font-black tracking-normal text-white">
+              <h1 className="m-0 max-w-full break-words text-[clamp(2.05rem,10vw,2.9rem)] leading-[0.9] font-black tracking-normal text-white lg:text-[clamp(3.45rem,7.6vw,7.8rem)] lg:leading-[0.86]">
                 Passive cleaning from surface physics.
               </h1>
-              <p className="m-0 max-w-[41rem] text-base leading-7 text-[#b5c8c5]">
+              <p className="m-0 max-w-full text-[0.92rem] leading-6 text-[#b5c8c5] sm:max-w-[41rem] sm:text-base sm:leading-7">
                 The project uses transparent PMMA as a solar-cover analog and
                 combines unmodified hydrophilic regions with CO2 laser-textured
                 hydrophobic regions. The goal is to loosen dust first, then move
@@ -97,7 +97,7 @@ export function ProductContent() {
 
             <div className="flex flex-wrap gap-3">
               <Link
-                className="group bg-[#47e4d0] px-5 py-3 text-sm font-black text-[#061116] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f0c86b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]"
+                className="group bg-[#47e4d0] px-4 py-2.5 text-xs font-black text-[#061116] transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#f0c86b] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0] sm:px-5 sm:py-3 sm:text-sm"
                 href="/pattern-lab"
               >
                 See coating patterns{" "}
@@ -106,7 +106,7 @@ export function ProductContent() {
                 </span>
               </Link>
               <Link
-                className="border border-white/15 px-5 py-3 text-sm font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-[#47e4d0] hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]"
+                className="border border-white/15 px-4 py-2.5 text-xs font-black text-white transition-all duration-300 hover:-translate-y-0.5 hover:border-[#47e4d0] hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0] sm:px-5 sm:py-3 sm:text-sm"
                 href="/optimizer"
               >
                 Open 3D optimizer
@@ -114,9 +114,8 @@ export function ProductContent() {
             </div>
           </div>
 
-          <div className="relative min-h-[72svh] overflow-hidden">
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(6,17,22,0.92)_0%,rgba(6,17,22,0.3)_34%,transparent_100%)] max-lg:hidden" />
-            <div className="absolute inset-x-5 top-10 bottom-20 flex items-center justify-center sm:inset-x-10 lg:inset-y-10 lg:left-0 lg:right-12">
+          <div className="relative min-h-[58svh] overflow-hidden lg:min-h-[72svh]">
+            <div className="absolute inset-x-5 top-8 bottom-20 flex items-center justify-center sm:inset-x-10 lg:inset-y-10 lg:left-0 lg:right-12">
               <ProductSurfaceVisual />
             </div>
             <div className="absolute bottom-5 left-1/2 flex w-[min(520px,calc(100%-2.5rem))] -translate-x-1/2 flex-wrap justify-center gap-x-12 gap-y-4 border-t border-white/10 pt-5 text-center">
@@ -131,16 +130,16 @@ export function ProductContent() {
         <div className="mx-auto grid max-w-7xl gap-16">
           <section className="grid gap-8 border-y border-white/10 py-12 lg:grid-cols-[0.55fr_1fr] lg:items-start">
             <div className="grid gap-3">
-              <p className="m-0 text-[0.68rem] font-black tracking-[0.28em] text-[#47e4d0] uppercase">
+              <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
                 Surface behavior
               </p>
-              <h2 className="m-0 max-w-[11ch] text-[clamp(2.4rem,5vw,5.3rem)] leading-[0.9] font-black text-white">
+              <h2 className="m-0 max-w-[11ch] text-[clamp(1.85rem,8.4vw,2.45rem)] leading-[0.92] font-black text-white lg:text-[clamp(2.4rem,5vw,5.3rem)] lg:leading-[0.9]">
                 A controlled cleaning sequence.
               </h2>
             </div>
 
             <div className="grid gap-8">
-              <p className="m-0 max-w-[48rem] text-lg leading-8 text-[#c6d7d3]">
+              <p className="m-0 max-w-[48rem] text-[0.95rem] leading-7 text-[#c6d7d3] sm:text-lg sm:leading-8">
                 The surface strategy centers on a simple insight: hydrophilic
                 regions spread water and help loosen adhered particles, while
                 hydrophobic microtextures help droplets move and carry loosened
@@ -170,20 +169,20 @@ export function ProductContent() {
 
           <section className="grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.65fr)] lg:items-start">
             <div className="grid gap-6">
-              <p className="m-0 text-[0.68rem] font-black tracking-[0.28em] text-[#47e4d0] uppercase">
+              <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
                 Testing evidence
               </p>
-              <h2 className="m-0 text-[clamp(2.2rem,4.6vw,5rem)] leading-[0.92] font-black text-white">
+              <h2 className="m-0 text-[clamp(1.8rem,8vw,2.4rem)] leading-[0.94] font-black text-white lg:text-[clamp(2.2rem,4.6vw,5rem)] lg:leading-[0.92]">
                 The mixed surface left the least residue.
               </h2>
-              <p className="m-0 max-w-[44rem] text-base leading-7 text-[#a7bbb8]">
+              <p className="m-0 max-w-[44rem] text-[0.95rem] leading-7 text-[#a7bbb8] sm:text-base">
                 The study compared hydrophilic, hydrophobic, and alternating
                 coupons under the same dust and water-cleaning conditions. The
                 alternating surface reached the lowest mean residual
                 contamination at 2.02%, compared with 2.57% for hydrophilic and
                 2.43% for hydrophobic controls.
               </p>
-              <p className="m-0 max-w-[44rem] text-base leading-7 text-[#a7bbb8]">
+              <p className="m-0 max-w-[44rem] text-[0.95rem] leading-7 text-[#a7bbb8] sm:text-base">
                 Pattern density testing also shaped the product direction. In
                 those tests, 30% laser-dot density kept the surface hydrophobic
                 while preserving more light transmission, so it was selected for
@@ -207,10 +206,10 @@ export function ProductContent() {
 function ProductProof({ label, value }: { label: string; value: string }) {
   return (
     <div className="group grid min-w-[11rem] justify-items-center gap-1 transition-transform duration-300 hover:-translate-y-0.5">
-      <span className="text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
+      <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.24em]">
         {label}
       </span>
-      <strong className="text-sm leading-5 text-white">{value}</strong>
+      <strong className="text-xs leading-4 text-white sm:text-sm sm:leading-5">{value}</strong>
     </div>
   );
 }
@@ -226,12 +225,12 @@ function ProductStep({
 }) {
   return (
     <article className="group grid gap-8 py-8 transition-colors duration-300 hover:bg-white/[0.025] lg:border-r lg:border-white/10 lg:px-7 lg:last:border-r-0">
-      <span className="text-sm font-black text-[#f0c86b] transition-transform duration-300 group-hover:translate-x-1">
+      <span className="text-xs font-black text-[#f0c86b] transition-transform duration-300 group-hover:translate-x-1 sm:text-sm">
         {index}
       </span>
       <div className="grid gap-3">
-        <h3 className="m-0 text-3xl leading-none font-black text-white">{title}</h3>
-        <p className="m-0 max-w-[24rem] text-sm leading-6 text-[#a7bbb8]">{text}</p>
+        <h3 className="m-0 text-2xl leading-none font-black text-white sm:text-3xl">{title}</h3>
+        <p className="m-0 max-w-[24rem] text-[0.86rem] leading-6 text-[#a7bbb8] sm:text-sm">{text}</p>
       </div>
     </article>
   );
@@ -240,10 +239,10 @@ function ProductStep({
 function ResearchMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 border-b border-white/10 pb-4 last:border-b-0">
-      <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+      <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
         {label}
       </span>
-      <strong className="text-3xl leading-none font-black text-white">{value}</strong>
+      <strong className="text-2xl leading-none font-black text-white sm:text-3xl">{value}</strong>
     </div>
   );
 }
@@ -268,7 +267,7 @@ function ProductSurfaceVisual() {
   ];
 
   return (
-    <div className="group relative aspect-[0.78/1] h-full max-h-[720px] w-full max-w-[520px] overflow-hidden bg-[#f7fcfc] shadow-[0_40px_120px_rgba(0,0,0,0.45)] transition-transform duration-700 hover:-translate-y-2 lg:rotate-[-3deg] lg:hover:rotate-[-1deg]">
+    <div className="group relative aspect-[0.78/1] h-full max-h-[720px] w-full max-w-[520px] overflow-hidden bg-[#f7fcfc] ring-1 ring-white/10 transition-transform duration-700 hover:-translate-y-2 lg:rotate-[-3deg] lg:hover:rotate-[-1deg]">
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.72)_0%,rgba(231,248,252,0.42)_48%,rgba(6,38,48,0.14)_100%)]" />
       <div className="absolute inset-0 bg-[linear-gradient(115deg,transparent_0%,rgba(255,255,255,0.34)_42%,transparent_62%)] opacity-0 transition-opacity duration-700 group-hover:opacity-100" />
       {Array.from({ length: 15 }).map((_, index) => (
@@ -285,7 +284,7 @@ function ProductSurfaceVisual() {
       ))}
       <SoilWashAnimation />
       <div className="absolute top-8 left-1/2 grid -translate-x-1/2 justify-items-center gap-1 text-center text-[#063238] transition-transform duration-700 group-hover:translate-y-2">
-        <span className="text-[0.68rem] font-black tracking-[0.22em] uppercase">
+        <span className="text-[0.55rem] font-black tracking-[0.16em] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
           runoff path
         </span>
         <span className="flex flex-col items-center" aria-hidden="true">
@@ -666,18 +665,18 @@ function SoilWashAnimation() {
 
 export function PatternLabContent() {
   return (
-    <section className="min-h-[calc(100svh-72px)] bg-[#061116] px-5 py-8 sm:px-8 lg:px-12">
-      <div className="mx-auto grid max-w-7xl gap-8">
-        <div className="grid gap-5 border-b border-white/10 pb-7 lg:grid-cols-[0.58fr_0.82fr] lg:items-end">
-          <div>
-            <p className="m-0 mb-3 text-[0.68rem] font-black tracking-[0.28em] text-[#47e4d0] uppercase">
+    <section className="min-h-[calc(100svh-72px)] overflow-x-hidden bg-[#061116] px-5 py-8 sm:px-8 lg:px-12">
+      <div className="mx-auto grid max-w-7xl min-w-0 gap-8">
+        <div className="grid min-w-0 gap-5 border-b border-white/10 pb-7 lg:grid-cols-[0.58fr_0.82fr] lg:items-end">
+          <div className="min-w-0">
+            <p className="m-0 mb-3 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
               Pattern lab
             </p>
-            <h1 className="m-0 text-[clamp(2.7rem,4.9vw,5.3rem)] leading-[0.88] font-black text-white">
+            <h1 className="m-0 max-w-full break-words text-[clamp(1.85rem,8.4vw,2.35rem)] leading-[0.92] font-black text-white lg:text-[clamp(2.7rem,4.9vw,5.3rem)] lg:leading-[0.88]">
               Coating pattern options.
             </h1>
           </div>
-          <p className="m-0 max-w-[43rem] text-sm leading-6 text-[#a7bbb8] lg:pb-1">
+          <p className="m-0 max-w-full text-[0.9rem] leading-6 text-[#a7bbb8] sm:text-sm lg:max-w-[43rem] lg:pb-1">
             A compact view of the surface layouts behind the coating concept:
             equal alternating bands, a smoother wettability transition, and
             rectangular paths that separate hydrophilic wetting from hydrophobic
@@ -738,10 +737,10 @@ function PatternStudy({
   return (
     <article className="grid gap-4 border-b border-white/10 pb-7 last:border-b-0">
       <div className="grid gap-2">
-        <p className="m-0 text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
+        <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.24em]">
           {eyebrow}
         </p>
-        <h2 className="m-0 max-w-[58rem] text-2xl leading-[0.98] font-black text-white sm:text-4xl">
+        <h2 className="m-0 max-w-[58rem] text-[1.32rem] leading-[1.02] font-black text-white sm:text-4xl sm:leading-[0.98]">
           {title}
         </h2>
       </div>
@@ -749,7 +748,7 @@ function PatternStudy({
         <div className="transition-transform duration-500 hover:-translate-y-1">
           {visual}
         </div>
-        <div className="grid max-w-[58rem] gap-3 text-sm leading-6 text-[#a7bbb8] xl:grid-cols-3">
+        <div className="grid max-w-[58rem] gap-3 text-[0.86rem] leading-6 text-[#a7bbb8] sm:text-sm xl:grid-cols-3">
           {paragraphs.map((paragraph) => (
             <p
               className="m-0 border-t border-white/10 pt-3 xl:border-t-0 xl:border-l xl:pl-4 xl:pt-0"
@@ -786,9 +785,9 @@ function MiniStripeSurface() {
           ))}
         </div>
       </div>
-      <div className="flex flex-wrap gap-2 text-xs font-black">
-        <span className="bg-white px-2.5 py-1.5 text-[#061116]">hydrophilic</span>
-        <span className="bg-[#9ee7ff] px-2.5 py-1.5 text-[#061116]">hydrophobic</span>
+      <div className="flex flex-wrap gap-2 text-[0.68rem] font-black sm:text-xs">
+        <span className="bg-white px-2 py-1.5 text-[#061116] sm:px-2.5">hydrophilic</span>
+        <span className="bg-[#9ee7ff] px-2 py-1.5 text-[#061116] sm:px-2.5">hydrophobic</span>
       </div>
     </div>
   );

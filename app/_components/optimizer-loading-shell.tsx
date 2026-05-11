@@ -18,7 +18,7 @@ export function OptimizerGlobeLoading() {
       <div className="absolute inset-0 grid place-items-center">
         <div className="grid place-items-center gap-4">
           <span className="h-14 w-14 rounded-full border-2 border-[#47e4d0]/20 border-t-[#47e4d0] animate-spin" />
-          <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#47e4d0] uppercase">
+          <span className="text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
             Loading globe
           </span>
         </div>
@@ -32,22 +32,22 @@ export function OptimizerLoadingShell() {
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#061116] text-[#e9fbf7] lg:h-screen lg:overflow-hidden">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#061116]/90 backdrop-blur-xl">
-        <nav className="flex flex-col gap-3 px-4 py-3 sm:h-[72px] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
-          <Link className="group grid gap-0.5 text-left" href="/product">
-            <span className="text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase transition-colors group-hover:text-[#f0c86b]">
+        <nav className="flex flex-col items-center gap-3 px-4 py-3 sm:h-[72px] sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-0">
+          <Link className="group grid gap-0.5 text-center sm:text-left" href="/product">
+            <span className="text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase transition-colors group-hover:text-[#f0c86b] sm:text-[0.68rem] sm:tracking-[0.24em]">
               Solstice Surface Systems
             </span>
-            <strong className="text-[0.95rem] font-semibold text-white">
+            <strong className="text-[0.86rem] font-semibold text-white sm:text-[0.95rem]">
               Retrofit solar cleaning overlays
             </strong>
           </Link>
 
-          <div className="flex gap-1 overflow-x-auto border border-white/10 bg-white/[0.03] p-1">
+          <div className="inline-flex max-w-full self-center gap-1 overflow-hidden border border-white/10 bg-white/[0.03] p-1 sm:flex sm:w-auto sm:self-auto sm:overflow-x-auto">
             {pages.map((page) => (
               <Link
                 aria-current={page.id === "optimizer" ? "page" : undefined}
                 className={cx(
-                  "cursor-pointer px-3.5 py-2 text-xs font-black tracking-normal whitespace-nowrap text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0]",
+                  "shrink-0 cursor-pointer px-2.5 py-2 text-center text-[0.64rem] font-black tracking-normal whitespace-nowrap text-[#9fb8b5] transition-all duration-300 hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#47e4d0] sm:px-3.5 sm:text-xs",
                   page.id === "optimizer" &&
                     "bg-white text-[#061116] shadow-[0_0_30px_rgba(71,228,208,0.18)]"
                 )}
@@ -67,34 +67,34 @@ export function OptimizerLoadingShell() {
           <aside className="z-10 order-2 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:order-1 lg:overflow-y-auto lg:border-t-0 lg:border-r [&::-webkit-scrollbar]:hidden">
             <div className="grid gap-5">
               <div>
-                <p className="mb-3 text-[0.68rem] font-black tracking-[0.24em] text-[#47e4d0] uppercase">
+                <p className="mb-3 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.24em]">
                   Optimizer surface
                 </p>
-                <h1 className="m-0 max-w-full text-[2.65rem] leading-[0.95] font-black tracking-normal break-words text-white 2xl:text-[2.85rem]">
+                <h1 className="m-0 max-w-full text-[1.9rem] leading-[0.98] font-black tracking-normal break-words text-white lg:text-[2.65rem] lg:leading-[0.95] 2xl:text-[2.85rem]">
                   Surface optimizer.
                 </h1>
               </div>
 
-              <p className="m-0 max-w-[17rem] text-sm leading-6 text-[#a7bbb8]">
+              <p className="m-0 max-w-[22rem] text-[0.86rem] leading-6 text-[#a7bbb8] sm:text-sm lg:max-w-[17rem]">
                 Hover pauses the globe. Click a country or U.S. state to tune the surface.
               </p>
 
               <div className="grid gap-2">
-                <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+                <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
                   Oceans and seas
                 </span>
-                <div className="border border-white/10 bg-[#07161b] px-3 py-3 text-sm font-bold text-[#708b88]">
+                <div className="border border-white/10 bg-[#07161b] px-3 py-2.5 text-[0.86rem] font-bold text-[#708b88] sm:py-3 sm:text-sm">
                   Choose ocean or sea
                 </div>
               </div>
 
               <div className="grid gap-3 border-y border-white/10 py-4">
                 <div className="flex items-center justify-between gap-4">
-                  <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+                  <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
                     Hover target
                   </span>
                 </div>
-                <strong className="text-lg leading-tight text-white">World view</strong>
+                <strong className="text-base leading-tight text-white sm:text-lg">World view</strong>
               </div>
             </div>
           </aside>
