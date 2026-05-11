@@ -877,11 +877,10 @@ function buildRecommendation({
 
 function recommendationFromGeo(
   geo: RegionFeature,
-  scope: "Country" | "U.S. State",
-  coordinates?: [number, number]
+  scope: "Country" | "U.S. State"
 ): RegionRecommendation {
   const name = geo.properties?.name ?? "Selected region";
-  const [longitude, latitude] = coordinatesFromFeature(geo, coordinates);
+  const [longitude, latitude] = coordinatesFromFeature(geo);
   const category = categoryForFeature(geo, scope);
 
   return buildRecommendation({
@@ -1301,12 +1300,8 @@ export default function Home() {
   );
 
   const selectGeo = useCallback(
-    (
-      geo: RegionFeature,
-      scope: SelectableScope,
-      coordinates?: [number, number]
-    ) => {
-      setSelectedRegion(recommendationFromGeo(geo, scope, coordinates));
+    (geo: RegionFeature, scope: SelectableScope) => {
+      setSelectedRegion(recommendationFromGeo(geo, scope));
     },
     []
   );
@@ -1423,7 +1418,12 @@ function OptimizerPanel({
     <section className="relative isolate min-h-[calc(100svh-72px)] overflow-hidden bg-[linear-gradient(180deg,#08191e_0%,#061116_46%,#041014_100%)] lg:h-[calc(100svh-72px)]">
       <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:72px_72px] opacity-30" />
       <div
-        className="relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:h-[calc(100svh-72px)] lg:grid-cols-[320px_minmax(0,1fr)]"
+        className={cx(
+          "relative grid min-h-[calc(100svh-72px)] grid-cols-1 lg:h-[calc(100svh-72px)]",
+          selectedRegion
+            ? "lg:grid-cols-[320px_minmax(0,1fr)_360px]"
+            : "lg:grid-cols-[320px_minmax(0,1fr)]"
+        )}
       >
         <aside className="z-10 order-2 overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-5 backdrop-blur-xl [scrollbar-width:none] lg:order-1 lg:overflow-y-auto lg:border-t-0 lg:border-r [&::-webkit-scrollbar]:hidden">
           <div className="grid gap-5">
@@ -1475,24 +1475,7 @@ function OptimizerPanel({
               <strong className="text-lg leading-tight text-white">{hoveredRegion.name}</strong>
             </div>
 
-            <div className="hidden gap-3 2xl:grid">
-              <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
-                Color legend
-              </span>
-              <div className="grid gap-2">
-                {Object.entries(labelByCategory).map(([category, label]) => (
-                  <div className="flex min-w-0 items-center justify-between gap-3" key={category}>
-                    <span className="min-w-0 text-xs text-[#b5c8c5]">{label}</span>
-                    <span
-                      className={cx(
-                        "h-2.5 w-16 shrink-0",
-                        legendColorClassByCategory[category as CategoryId]
-                      )}
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
+            <ColorLegend selectedCategory={selectedRegion?.category ?? null} />
           </div>
         </aside>
 
@@ -1507,11 +1490,10 @@ function OptimizerPanel({
           ) : (
             <OptimizerGlobeLoading />
           )}
-          {selectedRegion && <MainDesignPreview selectedRegion={selectedRegion} />}
         </div>
 
         {selectedRegion && (
-          <div className="z-20 order-3 lg:absolute lg:inset-y-0 lg:right-0 lg:w-[360px]">
+          <div className="z-20 order-3 lg:relative lg:w-auto">
             <RegionInspector
               profile={selectedProfile}
               selectedRegion={selectedRegion}
@@ -2121,8 +2103,52 @@ function RegionInspector({
           <StatLine label="Temperature" value={selectedRegion.temperature} />
           <StatLine label="Tilt basis" value={selectedRegion.tiltBasis} />
         </div>
+
+        <MainDesignPreview selectedRegion={selectedRegion} />
       </div>
     </aside>
+  );
+}
+
+function ColorLegend({ selectedCategory }: { selectedCategory: CategoryId | null }) {
+  return (
+    <div className="grid gap-3">
+      <div className="flex items-center justify-between gap-4">
+        <span className="text-[0.68rem] font-black tracking-[0.22em] text-[#708b88] uppercase">
+          Color legend
+        </span>
+        {selectedCategory && (
+          <span className="text-xs font-black text-[#f0c86b]">
+            {labelByCategory[selectedCategory]}
+          </span>
+        )}
+      </div>
+      <div className="grid gap-2">
+        {Object.entries(labelByCategory).map(([category, label]) => {
+          const categoryId = category as CategoryId;
+
+          return (
+            <div
+              className={cx(
+                "flex min-w-0 items-center justify-between gap-3 border border-white/10 bg-white/[0.025] px-2.5 py-2 transition-colors duration-300",
+                selectedCategory === categoryId && "border-[#f0c86b]/70 bg-white/[0.07]"
+              )}
+              key={category}
+            >
+              <span className="min-w-0 text-xs leading-tight font-bold text-[#b5c8c5]">
+                {label}
+              </span>
+              <span
+                className={cx(
+                  "h-2.5 w-14 shrink-0",
+                  legendColorClassByCategory[categoryId]
+                )}
+              />
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
@@ -2138,7 +2164,7 @@ function MainDesignPreview({
   }));
 
   return (
-    <div className="pointer-events-none absolute bottom-5 left-1/2 z-10 w-[min(22rem,calc(100%-2rem))] -translate-x-1/2 border border-white/12 bg-[#061116]/82 p-3 shadow-[0_22px_80px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+    <div className="w-full border border-white/12 bg-[#061116]/72 p-3 shadow-[0_18px_58px_rgba(0,0,0,0.24)]">
       <div className="mb-3 flex items-end justify-between gap-4">
         <div>
           <p className="m-0 text-[0.64rem] font-black tracking-[0.22em] text-[#47e4d0] uppercase">
@@ -2154,7 +2180,7 @@ function MainDesignPreview({
       </div>
       <div
         aria-label={`${selectedRegion.hydrophilic}% hydrophilic and ${selectedRegion.hydrophobic}% hydrophobic coating pattern`}
-        className="h-44 overflow-hidden border border-white/15 bg-white/5"
+        className="h-40 overflow-hidden border border-white/15 bg-white/5"
         role="img"
       >
         <div className="flex h-full flex-col">
