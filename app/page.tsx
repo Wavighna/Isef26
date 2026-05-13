@@ -78,6 +78,7 @@ type HoveredRegion = {
 type GlobeFocus = {
   latitude: number;
   longitude: number;
+  spanDegrees?: number;
 };
 
 type GlobePick = {
@@ -361,6 +362,258 @@ const marineZones: MarineZone[] = [
   }
 ];
 
+const pvgisCountryTiltByName: Record<string, number> = {
+  Afghanistan: 32,
+  Akrotiri: 31,
+  Aland: 44,
+  Albania: 36,
+  Algeria: 30,
+  "American Samoa": 17,
+  Andorra: 36,
+  Angola: 20,
+  Anguilla: 19,
+  "Antigua and Barb.": 18,
+  Argentina: 34,
+  Armenia: 32,
+  Aruba: 12,
+  "Ashmore and Cartier Is.": 16,
+  Australia: 25,
+  Austria: 35,
+  Azerbaijan: 34,
+  Bahamas: 24,
+  Bahrain: 26,
+  Bangladesh: 30,
+  Barbados: 14,
+  Belarus: 40,
+  Belgium: 39,
+  Belize: 16,
+  Benin: 14,
+  Bermuda: 28,
+  Bhutan: 31,
+  Bolivia: 18,
+  "Bosnia and Herz.": 35,
+  Botswana: 27,
+  "Br. Indian Ocean Ter.": 9,
+  Brazil: 18,
+  "British Virgin Is.": 19,
+  Brunei: 3,
+  Bulgaria: 35,
+  "Burkina Faso": 16,
+  Burundi: 7,
+  "Cabo Verde": 11,
+  Cambodia: 15,
+  Cameroon: 10,
+  Canada: 51,
+  "Cayman Is.": 20,
+  "Central African Rep.": 10,
+  Chad: 19,
+  Chile: 31,
+  China: 37,
+  "Clipperton I.": 13,
+  Colombia: 7,
+  Comoros: 16,
+  Congo: 0,
+  "Cook Is.": 21,
+  "Coral Sea Is.": 21,
+  "Costa Rica": 14,
+  "Cote d'Ivoire": 11,
+  Croatia: 36,
+  Cuba: 22,
+  Curacao: 12,
+  Cyprus: 28,
+  "Cyprus U.N. Buffer Zone": 31,
+  Czechia: 37,
+  "Dem. Rep. Congo": 4,
+  Denmark: 42,
+  Dhekelia: 31,
+  Djibouti: 14,
+  Dominica: 16,
+  "Dominican Rep.": 20,
+  Ecuador: 2,
+  Egypt: 27,
+  "El Salvador": 16,
+  "Eq. Guinea": 4,
+  Eritrea: 19,
+  Estonia: 42,
+  Ethiopia: 12,
+  eSwatini: 31,
+  "Faeroe Is.": 39,
+  "Falkland Is.": 45,
+  Fiji: 18,
+  Finland: 46,
+  France: 34,
+  "Fr. Polynesia": 19,
+  "Fr. S. Antarctic Lands": 38,
+  Gabon: 0,
+  Gambia: 16,
+  Georgia: 35,
+  Germany: 38,
+  Ghana: 11,
+  Gibraltar: 30,
+  Greece: 32,
+  Greenland: 53,
+  Grenada: 13,
+  Guam: 15,
+  Guatemala: 14,
+  Guernsey: 37,
+  Guinea: 14,
+  "Guinea-Bissau": 15,
+  Guyana: 5,
+  Haiti: 20,
+  "Heard I. and McDonald Is.": 44,
+  Honduras: 13,
+  "Hong Kong": 23,
+  Hungary: 38,
+  Iceland: 44,
+  India: 28,
+  "Indian Ocean Ter.": 12,
+  Indonesia: 5,
+  Iran: 30,
+  Iraq: 31,
+  Ireland: 40,
+  "Isle of Man": 40,
+  Israel: 28,
+  Italy: 37,
+  Jamaica: 18,
+  Japan: 42,
+  Jersey: 38,
+  Jordan: 29,
+  Kazakhstan: 42,
+  Kenya: 1,
+  Kiribati: 2,
+  Kosovo: 34,
+  Kuwait: 28,
+  Kyrgyzstan: 39,
+  Laos: 25,
+  Latvia: 41,
+  Lebanon: 27,
+  Lesotho: 31,
+  Liberia: 9,
+  Libya: 27,
+  Liechtenstein: 39,
+  Lithuania: 40,
+  Luxembourg: 37,
+  Macao: 22,
+  Macedonia: 35,
+  Madagascar: 24,
+  Malawi: 18,
+  Malaysia: 2,
+  Maldives: 4,
+  Mali: 20,
+  Malta: 32,
+  "Marshall Is.": 12,
+  Mauritania: 20,
+  Mauritius: 20,
+  Mexico: 25,
+  Micronesia: 8,
+  Moldova: 37,
+  Monaco: 37,
+  Mongolia: 45,
+  Montenegro: 36,
+  Montserrat: 18,
+  Morocco: 30,
+  Mozambique: 18,
+  Myanmar: 27,
+  "N. Cyprus": 31,
+  "N. Mariana Is.": 17,
+  Namibia: 27,
+  Nauru: 2,
+  Nepal: 31,
+  Netherlands: 39,
+  "New Caledonia": 21,
+  "New Zealand": 37,
+  Nicaragua: 14,
+  Niger: 21,
+  Nigeria: 16,
+  Niue: 20,
+  "North Korea": 41,
+  Norway: 49,
+  Oman: 24,
+  Pakistan: 33,
+  Palau: 8,
+  Palestine: 27,
+  Panama: 12,
+  "Papua New Guinea": 7,
+  Paraguay: 22,
+  Peru: 13,
+  Philippines: 12,
+  "Pitcairn Is.": 24,
+  Poland: 40,
+  Portugal: 34,
+  "Puerto Rico": 17,
+  Qatar: 25,
+  Romania: 38,
+  Russia: 48,
+  Rwanda: 4,
+  "S. Geo. and the Is.": 36,
+  "S. Sudan": 12,
+  "Saint Helena": 29,
+  "Saint Lucia": 14,
+  Samoa: 16,
+  "San Marino": 34,
+  "Sao Tome and Principe": 0,
+  "Saudi Arabia": 25,
+  Senegal: 17,
+  Serbia: 36,
+  "Serranilla Bank": 16,
+  Seychelles: 11,
+  "Siachen Glacier": 31,
+  "Sierra Leone": 13,
+  Singapore: 0,
+  "Sint Maarten": 18,
+  Slovakia: 36,
+  Slovenia: 37,
+  "Solomon Is.": 9,
+  Somalia: 7,
+  Somaliland: 13,
+  "South Africa": 32,
+  "South Korea": 37,
+  Spain: 37,
+  "Spratly Is.": 12,
+  "Sri Lanka": 4,
+  "St. Kitts and Nevis": 18,
+  "St. Pierre and Miquelon": 39,
+  "St. Vin. and Gren.": 13,
+  "St-Barthelemy": 18,
+  "St-Martin": 19,
+  Sudan: 20,
+  Suriname: 3,
+  Sweden: 45,
+  Switzerland: 33,
+  Syria: 30,
+  Taiwan: 22,
+  Tajikistan: 32,
+  Tanzania: 9,
+  Thailand: 19,
+  "Timor-Leste": 10,
+  Togo: 13,
+  Tonga: 20,
+  "Trinidad and Tobago": 10,
+  Tunisia: 33,
+  Turkey: 32,
+  Turkmenistan: 37,
+  "Turks and Caicos Is.": 22,
+  Tuvalu: 10,
+  "U.S. Minor Outlying Is.": 6,
+  "U.S. Virgin Is.": 18,
+  Uganda: 3,
+  Ukraine: 37,
+  "United Arab Emirates": 25,
+  "United Kingdom": 38,
+  "United States of America": 42,
+  Uruguay: 30,
+  Uzbekistan: 39,
+  Vanuatu: 16,
+  Vatican: 37,
+  Venezuela: 10,
+  Vietnam: 15,
+  "W. Sahara": 25,
+  "Wallis and Futuna Is.": 16,
+  Yemen: 20,
+  Zambia: 20,
+  Zimbabwe: 25
+};
+
 const desertCountries = new Set([
   "Algeria",
   "Australia",
@@ -563,6 +816,10 @@ function coordinateDistanceDegrees(
 
 function normalizeLongitudeToReference(longitude: number, reference: number) {
   return reference + ((((longitude - reference) + 540) % 360) - 180);
+}
+
+function normalizeLongitude(longitude: number) {
+  return ((((longitude + 180) % 360) + 360) % 360) - 180;
 }
 
 function pointOnSegment(
@@ -771,6 +1028,12 @@ function coordinatesFromFeature(
   ];
 }
 
+function pvgisCountryTilt(name: string) {
+  return pvgisCountryTiltByName[
+    name.normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+  ];
+}
+
 function estimatedAnnualTilt(latitude: number, category: CategoryId) {
   const absoluteLatitude = Math.abs(latitude);
   let tilt: number;
@@ -858,6 +1121,7 @@ function buildRecommendation({
   waterContent?: string;
 }): RegionRecommendation {
   const profile = categoryProfiles[category];
+  const countryTilt = scope === "Country" ? pvgisCountryTilt(name) : undefined;
 
   return {
     id,
@@ -866,7 +1130,7 @@ function buildRecommendation({
     category,
     latitude,
     longitude,
-    tilt: estimatedAnnualTilt(latitude, category),
+    tilt: countryTilt ?? estimatedAnnualTilt(latitude, category),
     tiltBasis: tiltBasis(latitude, category),
     note,
     ...profile,
@@ -1211,6 +1475,68 @@ function selectedFeatureForRegion(
   );
 }
 
+function globeFocusFromFeature(
+  geo: RegionFeature,
+  fallback: [number, number]
+): GlobeFocus {
+  const points = collectGeometryCoordinates(geo.geometry);
+  if (!points.length) {
+    return {
+      latitude: fallback[1],
+      longitude: fallback[0]
+    };
+  }
+
+  const referenceLongitude = fallback[0];
+  const longitudes = points.map(([longitude]) =>
+    normalizeLongitudeToReference(longitude, referenceLongitude)
+  );
+  const latitudes = points.map(([, latitude]) => latitude);
+  const minLongitude = Math.min(...longitudes);
+  const maxLongitude = Math.max(...longitudes);
+  const minLatitude = Math.min(...latitudes);
+  const maxLatitude = Math.max(...latitudes);
+
+  return {
+    latitude: clamp(
+      (minLatitude + maxLatitude) / 2,
+      -globeFocusLatitudeLimit,
+      globeFocusLatitudeLimit
+    ),
+    longitude: normalizeLongitude((minLongitude + maxLongitude) / 2),
+    spanDegrees: Math.max(maxLongitude - minLongitude, maxLatitude - minLatitude)
+  };
+}
+
+function globeFocusFromSelectedRegion(
+  selectedRegion: RegionRecommendation | null
+): GlobeFocus | null {
+  if (!selectedRegion) return null;
+
+  if (selectedRegion.scope === "Ocean / Sea") {
+    return {
+      latitude: selectedRegion.latitude,
+      longitude: selectedRegion.longitude,
+      spanDegrees: selectedRegion.name.includes("Ocean") ? 85 : 45
+    };
+  }
+
+  const fallback: [number, number] = [
+    selectedRegion.longitude,
+    selectedRegion.latitude
+  ];
+  const selectedFeature = selectedFeatureForRegion(selectedRegion);
+
+  if (!selectedFeature) {
+    return {
+      latitude: selectedRegion.latitude,
+      longitude: selectedRegion.longitude
+    };
+  }
+
+  return globeFocusFromFeature(selectedFeature, fallback);
+}
+
 function marineHighlightRadius(selectedRegion: RegionRecommendation) {
   if (selectedRegion.name.includes("Ocean")) return 170;
   if (selectedRegion.name.includes("Gulf")) return 92;
@@ -1501,7 +1827,7 @@ function OptimizerPanel({
         </div>
 
         {selectedRegion && (
-          <div className="z-20 order-3 lg:relative lg:w-auto">
+          <div className="z-20 order-3 min-h-0 lg:relative lg:h-full lg:min-h-0 lg:w-auto lg:overflow-hidden">
             <RegionInspector
               onBack={onSelectionClear}
               profile={selectedProfile}
@@ -1540,12 +1866,7 @@ function InteractiveGlobe({
   }, [onHover, onMarineSelect, onSelect]);
 
   useEffect(() => {
-    focusRef.current = selectedRegion
-      ? {
-          longitude: selectedRegion.longitude,
-          latitude: selectedRegion.latitude
-        }
-      : null;
+    focusRef.current = globeFocusFromSelectedRegion(selectedRegion);
 
     const material = highlightMaterialRef.current;
     if (!material) return;
@@ -1959,8 +2280,19 @@ function InteractiveGlobe({
 
     const animate = () => {
       const focus = focusRef.current;
-      const isMobileGlobe = container.clientWidth < 640;
-      const focusedCameraZ = isMobileGlobe ? 5.7 : 5.9;
+      const containerWidth = container.clientWidth;
+      const isMobileGlobe = containerWidth < 640;
+      const compactDesktopOffset = isMobileGlobe
+        ? 0
+        : clamp((980 - containerWidth) / 500, 0, 1) * 0.85;
+      const selectedSpanOffset = focus?.spanDegrees
+        ? clamp((focus.spanDegrees - 24) / 110, 0, 1) *
+          (isMobileGlobe ? 0.9 : 1.65)
+        : 0;
+      const focusedCameraZ =
+        (isMobileGlobe ? 5.7 : 5.9) +
+        compactDesktopOffset +
+        selectedSpanOffset;
       const idleCameraZ = isMobileGlobe ? 7.55 : 8.25;
 
       if (focus) {
@@ -2072,7 +2404,7 @@ function RegionInspector({
   }
 
   return (
-    <aside className="z-10 order-3 h-full overflow-x-hidden border-t border-white/10 bg-[#07161b]/90 p-4 backdrop-blur-xl [scrollbar-width:none] lg:overflow-y-auto lg:border-t-0 lg:border-l lg:p-5 [&::-webkit-scrollbar]:hidden">
+    <aside className="z-10 order-3 min-h-0 max-h-[calc(100svh-72px)] overflow-x-hidden overflow-y-auto border-t border-white/10 bg-[#07161b]/90 p-4 backdrop-blur-xl [scrollbar-width:none] lg:h-full lg:max-h-full lg:border-t-0 lg:border-l lg:p-5 [&::-webkit-scrollbar]:hidden">
       <div className="grid gap-5 lg:gap-6">
         <div className="grid gap-3">
           <div className="flex items-start justify-between gap-4">
