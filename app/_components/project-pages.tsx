@@ -81,17 +81,18 @@ export function ProductContent() {
           <div className="grid min-w-0 content-center gap-8 px-5 py-12 sm:px-8 lg:gap-10 lg:px-12 lg:py-16">
             <div className="grid max-w-[50rem] min-w-0 gap-6">
               <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
-                Chemical-free PV cleaning surface
+                No applied hydrophobic coating
               </p>
               <h1 className="m-0 max-w-full break-words text-[clamp(2.05rem,10vw,2.9rem)] leading-[0.9] font-black tracking-normal text-white lg:text-[clamp(3.45rem,7.6vw,7.8rem)] lg:leading-[0.86]">
                 Passive cleaning from surface physics.
               </h1>
               <p className="m-0 max-w-full text-[0.92rem] leading-6 text-[#b5c8c5] sm:max-w-[41rem] sm:text-base sm:leading-7">
-                The project uses transparent PMMA as a solar-cover analog and
-                combines unmodified hydrophilic regions with CO2 laser-textured
-                hydrophobic regions. The goal is to loosen dust first, then move
-                dirty droplets down the panel without PFAS-style chemical
-                coatings.
+                Dust, pollen, salt film, and mineral residue block incoming
+                light and make solar arrays harder to maintain. This research
+                prototype uses transparent PMMA as a solar-cover analog,
+                combining unmodified hydrophilic regions with CO2
+                laser-textured hydrophobic release zones so water can loosen
+                soil first, then carry dirty droplets down the panel.
               </p>
             </div>
 
@@ -121,6 +122,7 @@ export function ProductContent() {
             <div className="absolute bottom-5 left-1/2 flex w-[min(520px,calc(100%-2.5rem))] -translate-x-1/2 flex-wrap justify-center gap-x-12 gap-y-4 border-t border-white/10 pt-5 text-center">
               <ProductProof label="Material" value="PMMA cover analog" />
               <ProductProof label="Texture" value="30% CO2 laser dot density" />
+              <ProductProof label="Status" value="controlled coupon prototype" />
             </div>
           </div>
         </div>
@@ -167,6 +169,41 @@ export function ProductContent() {
             </div>
           </section>
 
+          <section className="grid gap-10 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1fr)] lg:items-start">
+            <div className="grid gap-3">
+              <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
+                Research framing
+              </p>
+              <h2 className="m-0 max-w-[12ch] text-[clamp(1.85rem,8.4vw,2.45rem)] leading-[0.92] font-black text-white lg:text-[clamp(2.2rem,4.4vw,4.7rem)] lg:leading-[0.9]">
+                What the prototype is testing.
+              </h2>
+              <p className="m-0 max-w-[32rem] text-[0.9rem] leading-6 text-[#a7bbb8] sm:text-sm">
+                The demo is strongest when it is read as an ISEF research
+                system: a controlled surface experiment first, and a future
+                retrofit product only after field validation.
+              </p>
+            </div>
+
+            <div className="grid gap-0 border-t border-white/10 sm:grid-cols-2">
+              <ResearchFrameItem
+                label="Question"
+                text="Can alternating wetting and release zones remove more residue than a fully hydrophilic or fully hydrophobic surface?"
+              />
+              <ResearchFrameItem
+                label="Hypothesis"
+                text="Hydrophilic PMMA should spread water across adhered particles, while laser-textured hydrophobic zones should reduce pinning and help droplets transport residue."
+              />
+              <ResearchFrameItem
+                label="Controls"
+                text="Compare hydrophilic-only, hydrophobic-only, and alternating coupons under the same dust, water, tilt, and cleaning protocol."
+              />
+              <ResearchFrameItem
+                label="Measurement"
+                text="Residual contamination should be tied to a defined image or mass method, with replicate count, variance, and statistical test documented before final judging."
+              />
+            </div>
+          </section>
+
           <section className="grid gap-10 lg:grid-cols-[minmax(0,0.95fr)_minmax(320px,0.65fr)] lg:items-start">
             <div className="grid gap-6">
               <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
@@ -176,11 +213,11 @@ export function ProductContent() {
                 The mixed surface left the least residue.
               </h2>
               <p className="m-0 max-w-[44rem] text-[0.95rem] leading-7 text-[#a7bbb8] sm:text-base">
-                The study compared hydrophilic, hydrophobic, and alternating
-                coupons under the same dust and water-cleaning conditions. The
-                alternating surface reached the lowest mean residual
-                contamination at 2.02%, compared with 2.57% for hydrophilic and
-                2.43% for hydrophobic controls.
+                The current evidence compares hydrophilic, hydrophobic, and
+                alternating coupons under controlled dust and water-cleaning
+                conditions. In that trial set, the alternating surface reached
+                the lowest mean residual contamination at 2.02%, compared with
+                2.57% for hydrophilic and 2.43% for hydrophobic controls.
               </p>
               <p className="m-0 max-w-[44rem] text-[0.95rem] leading-7 text-[#a7bbb8] sm:text-base">
                 Pattern density testing also shaped the product direction. In
@@ -188,13 +225,52 @@ export function ProductContent() {
                 while preserving more light transmission, so it was selected for
                 later cleaning trials.
               </p>
+              <p className="m-0 max-w-[44rem] border-l border-[#f0c86b]/70 pl-4 text-[0.82rem] leading-6 text-[#d6cda8] sm:text-sm">
+                Judge note: before final submission, connect each number to the
+                lab notebook method: number of trials, dust recipe, water volume,
+                tilt angle, cleaning duration, image-analysis method, error
+                bars, and statistical test.
+              </p>
             </div>
 
             <div className="grid gap-5 border-l border-white/10 pl-5">
               <ResearchMetric label="Residual contamination" value="2.02%" />
-              <ResearchMetric label="Improvement vs. hydrophilic" value="21.7%" />
-              <ResearchMetric label="Statistical result" value="p < 0.01" />
-              <ResearchMetric label="PMMA transmittance basis" value="~92%" />
+              <ResearchMetric label="Improvement vs. hydrophilic" value="report with formula" />
+              <ResearchMetric label="Statistical result" value="add test name" />
+              <ResearchMetric label="PMMA transmittance basis" value="document source" />
+            </div>
+          </section>
+
+          <section className="grid gap-10 border-t border-white/10 pt-12 lg:grid-cols-[minmax(0,0.9fr)_minmax(320px,0.7fr)] lg:items-start">
+            <div className="grid gap-4">
+              <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
+                Deployment path
+              </p>
+              <h2 className="m-0 text-[clamp(1.8rem,8vw,2.4rem)] leading-[0.94] font-black text-white lg:text-[clamp(2.2rem,4.4vw,4.5rem)] lg:leading-[0.92]">
+                From science fair coupon to solar product.
+              </h2>
+              <p className="m-0 max-w-[48rem] text-[0.95rem] leading-7 text-[#a7bbb8] sm:text-base">
+                The near-term product idea is a transparent retrofit sheet for
+                solar-panel operators, installers, or panel makers that want to
+                reduce water, labor, and downtime from cleaning. The current
+                prototype does not prove those savings yet; it shows the
+                physical mechanism and a path to validate them.
+              </p>
+            </div>
+
+            <div className="grid gap-0 border-y border-white/10">
+              <ValidationLine
+                label="Validated now"
+                text="Controlled PMMA coupon comparison under a shared cleaning protocol."
+              />
+              <ValidationLine
+                label="Still needed"
+                text="Contact angle hysteresis, sliding angle, optical haze, abrasion, UV aging, and outdoor PV power recovery."
+              />
+              <ValidationLine
+                label="Commercial proof"
+                text="Show that the overlay cleans enough residue to justify added material cost without unacceptable light loss."
+              />
             </div>
           </section>
         </div>
@@ -236,6 +312,17 @@ function ProductStep({
   );
 }
 
+function ResearchFrameItem({ label, text }: { label: string; text: string }) {
+  return (
+    <article className="grid gap-3 border-b border-white/10 py-5 sm:odd:border-r sm:odd:pr-5 sm:even:pl-5">
+      <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#f0c86b] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
+        {label}
+      </span>
+      <p className="m-0 text-[0.86rem] leading-6 text-[#a7bbb8] sm:text-sm">{text}</p>
+    </article>
+  );
+}
+
 function ResearchMetric({ label, value }: { label: string; value: string }) {
   return (
     <div className="grid gap-1 border-b border-white/10 pb-4 last:border-b-0">
@@ -243,6 +330,17 @@ function ResearchMetric({ label, value }: { label: string; value: string }) {
         {label}
       </span>
       <strong className="text-2xl leading-none font-black text-white sm:text-3xl">{value}</strong>
+    </div>
+  );
+}
+
+function ValidationLine({ label, text }: { label: string; text: string }) {
+  return (
+    <div className="grid gap-1 border-b border-white/10 py-4 last:border-b-0">
+      <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
+        {label}
+      </span>
+      <strong className="text-[0.86rem] leading-6 text-[#dbe9e6] sm:text-sm">{text}</strong>
     </div>
   );
 }
@@ -692,7 +790,7 @@ export function PatternLabContent() {
             paragraphs={[
               "The baseline layout uses equal-width hydrophilic and hydrophobic bands so every water path crosses the same amount of each surface.",
               "Hydrophilic bands spread water across dust and mineral residue. Dotted hydrophobic bands create release zones that help droplets keep moving.",
-              "This pattern is the clearest production direction because it is easy to manufacture, easy to inspect, and directly aligned with downward droplet travel."
+              "This pattern is the most practical next prototype candidate because it is easy to inspect and directly aligned with downward droplet travel."
             ]}
           />
 
@@ -703,7 +801,7 @@ export function PatternLabContent() {
             paragraphs={[
               "This option moves gradually from hydrophilic wetting into hydrophobic release instead of switching between hard bands.",
               "The smoother transition is meant to reduce droplet pinning, where water slows down at a sharp surface boundary.",
-              "It is useful as a comparison to the equal-band design when tuning for smoother water movement across the panel."
+              "It is useful as a future comparison to the equal-band design when tuning for smoother water movement across the panel."
             ]}
           />
 
@@ -714,9 +812,34 @@ export function PatternLabContent() {
             paragraphs={[
               "Rectangular paths test whether geometry can steer dirty water outward as well as downward.",
               "Plain rectangular channels are hydrophilic wetting zones. Dotted rectangular bands are hydrophobic release paths, made more visible here so the alternating behavior is clear.",
-              "This layout keeps large transparent areas while adding repeated release paths around the surface."
+              "This layout keeps large transparent areas while adding repeated release paths around the surface, but needs optical-loss and durability testing."
             ]}
           />
+        </div>
+
+        <div className="grid gap-4 border-t border-white/10 pt-7 lg:grid-cols-[0.42fr_1fr]">
+          <div>
+            <p className="m-0 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.28em]">
+              Pattern constraints
+            </p>
+            <h2 className="m-0 mt-2 text-[1.55rem] leading-[0.98] font-black text-white sm:text-3xl">
+              Each pattern must earn its place.
+            </h2>
+          </div>
+          <div className="grid gap-3 text-[0.86rem] leading-6 text-[#a7bbb8] sm:grid-cols-3 sm:text-sm">
+            <p className="m-0 border-t border-white/10 pt-3 sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
+              Transparency matters because any cleaning benefit must outweigh
+              added haze or optical loss from texture.
+            </p>
+            <p className="m-0 border-t border-white/10 pt-3 sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
+              Durability matters because outdoor panels face UV exposure,
+              abrasion, thermal cycling, and repeated wet/dry soiling.
+            </p>
+            <p className="m-0 border-t border-white/10 pt-3 sm:border-t-0 sm:border-l sm:pl-4 sm:pt-0">
+              Manufacturability matters because a retrofit overlay must be
+              inspectable, repeatable, and practical to apply at panel scale.
+            </p>
+          </div>
         </div>
       </div>
     </section>

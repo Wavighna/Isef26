@@ -1457,10 +1457,10 @@ function tiltBasis(latitude: number, category: CategoryId) {
   const summerTilt = Math.round(clamp(absoluteLatitude - 15, 10, 25));
 
   if (category === "rainy-steep" || category === "polar-marine") {
-    return `PVGIS annual estimate, raised for wet/cold cleaning; seasonal range ${summerTilt}-${winterTilt} deg.`;
+    return `Annual tilt heuristic, raised for wet/cold cleaning; seasonal range ${summerTilt}-${winterTilt} deg.`;
   }
 
-  return `PVGIS annual estimate from latitude; seasonal range ${summerTilt}-${winterTilt} deg.`;
+  return `Annual tilt heuristic from latitude; seasonal range ${summerTilt}-${winterTilt} deg.`;
 }
 
 function classifyCountry(name: string, latitude: number): CategoryId {
@@ -2164,20 +2164,25 @@ function OptimizerPanel({
           <div className="grid gap-4 lg:gap-5">
             <div>
               <p className="mb-3 text-[0.58rem] font-black tracking-[0.2em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.24em]">
-                Optimizer surface
+                Prototype climate recommender
               </p>
               <h1 className="m-0 max-w-full text-[1.9rem] leading-[0.98] font-black tracking-normal break-words text-white lg:text-[2.65rem] lg:leading-[0.95] 2xl:text-[2.85rem]">
-                Surface optimizer.
+                Pattern heuristic.
               </h1>
             </div>
 
             <p className="m-0 max-w-[22rem] text-[0.86rem] leading-6 text-[#a7bbb8] sm:text-sm lg:max-w-[17rem]">
-              Hover pauses the globe. Click a country or U.S. state to tune the surface.
+              Click a country or U.S. state to see a starting pattern based on broad climate and soiling categories.
+            </p>
+
+            <p className="m-0 border-l border-[#f0c86b]/70 pl-3 text-[0.76rem] leading-5 text-[#d6cda8] sm:text-xs">
+              These outputs are prototype heuristics, not validated predictions
+              of energy gain, cleaning interval, or field performance.
             </p>
 
             <div className="grid gap-2">
               <span className="text-[0.56rem] font-black tracking-[0.18em] text-[#708b88] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
-                Oceans and seas
+                Future marine contexts
               </span>
               <select
                 className="w-full cursor-pointer border border-white/10 bg-[#07161b] px-3 py-2.5 text-[0.86rem] font-bold text-[#dbe9e6] outline-none transition-colors duration-300 hover:border-[#47e4d0]/70 focus:border-[#47e4d0] sm:py-3 sm:text-sm"
@@ -2858,6 +2863,24 @@ function RegionInspector({
           <StatLine label="Tilt basis" value={selectedRegion.tiltBasis} />
         </div>
 
+        <div className="grid gap-3 border-b border-white/10 pb-5">
+          <p className="m-0 text-[0.56rem] font-black tracking-[0.18em] text-[#47e4d0] uppercase sm:text-[0.68rem] sm:tracking-[0.22em]">
+            Data basis
+          </p>
+          <AssumptionLine
+            label="Recommendation"
+            value="Broad climate category plus soiling profile; not a calibrated site model."
+          />
+          <AssumptionLine
+            label="Percentages"
+            value="Starting-point design parameters for comparison, not region-specific experimental optima."
+          />
+          <AssumptionLine
+            label="Next validation"
+            value="Needs contact angle, sliding angle, haze, durability, outdoor soiling, and power-recovery data."
+          />
+        </div>
+
         <MainDesignPreview selectedRegion={selectedRegion} />
       </div>
     </aside>
@@ -2959,6 +2982,11 @@ function MainDesignPreview({
       <div className="mt-2 flex flex-wrap gap-2 text-[0.56rem] font-black tracking-[0.08em] uppercase sm:text-[0.65rem] sm:tracking-[0.12em]">
         <span className="bg-white px-1.5 py-1 text-[#061116] sm:px-2">hydrophilic</span>
         <span className="bg-[#9ee7ff] px-1.5 py-1 text-[#061116] sm:px-2">hydrophobic</span>
+        {selectedRegion.stripCount > stripCount && (
+          <span className="border border-white/10 px-1.5 py-1 text-[#dbe9e6] sm:px-2">
+            illustrative preview
+          </span>
+        )}
       </div>
     </div>
   );
@@ -2982,6 +3010,17 @@ function StatLine({ label, value }: { label: string; value: string }) {
         {label}
       </span>
       <strong className="text-[0.86rem] leading-5 text-[#dbe9e6] sm:text-sm">{value}</strong>
+    </div>
+  );
+}
+
+function AssumptionLine({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="grid gap-1">
+      <span className="text-[0.56rem] font-black tracking-[0.14em] text-[#708b88] uppercase sm:text-[0.64rem] sm:tracking-[0.18em]">
+        {label}
+      </span>
+      <strong className="text-[0.78rem] leading-5 text-[#dbe9e6] sm:text-[0.86rem]">{value}</strong>
     </div>
   );
 }
